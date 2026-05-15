@@ -1,27 +1,24 @@
 # Holistic Dashboard
 
-Dieses Verzeichnis enthält die Planung und (künftige) Implementierung des **Holistic Dashboards**.
+Dieses Verzeichnis enthält die Implementierung des **Holistic Dashboards** – des zentralen Nutzer-Portals für den Homeserver.
 
-## Vision
-Damit Familienmitglieder ohne IT-Kenntnisse ihre Dienste managen können, wird dieses Portal als zentraler Einstiegspunkt im Heimnetzwerk bereitgestellt. Es richtet sich an alle Endanwender des Homeservers (z. B. `dada`, `mama` sowie den Admin `nanu`).
+## Vision und Nutzen
 
-## Features (Geplant)
+Das Dashboard bietet einen benutzerfreundlichen, zentralen Einstiegspunkt im Heimnetzwerk. Es ist so gestaltet, dass auch Personen ohne IT-Kenntnisse die angebundenen Dienste einsehen und ihre eigenen Konten verwalten können.
+
+## Features
 
 1. **Zentraler Login**
-   - Jeder Nutzer meldet sich mit seinem Homeserver-Benutzernamen und Passwort an.
-   - Da das System eng mit den Ubuntu-Benutzern verknüpft ist, entspricht dies den Linux-Credentials des jeweiligen Users.
+   - Nutzer melden sich mit ihrem Homeserver-Benutzernamen und Passwort an.
+   - Die Authentifizierung ist direkt mit den nativen Linux-Benutzern des Servers verknüpft.
 
 2. **Dienste-Übersicht (Services)**
-   - Auf einer modernen und simplen Oberfläche werden alle aktiven Dienste dargestellt.
-   - Anfangs gibt es nur den Dienst **Samba** (Dateifreigabe). Zukünftig folgen Mediaserver, Smart Home Manager und Game Streamer.
+   - Anzeige aller aktiven, in den Homeserver integrierten Dienste.
+   - Das Dashboard liest die Informationen der geoutsourcten Dienste aus (z.B. Dateifreigaben, Smart Home Anbindungen) und stellt sie anwendergerecht dar.
 
 3. **Service-Informationen & Optionen**
-   - Wenn der Nutzer auf einen Dienst (z. B. Samba) klickt, sieht er direkt relevante Informationen.
-   - Beispiel Samba: Es wird angezeigt, über welche konkrete Netzwerkadresse (z.B. `\\<Server-IP>\dada` oder `smb://<Server-IP>/dada`) der Nutzer seine Medien auf dem eigenen Gerät (PC, Mac, Smartphone) einhängen kann.
+   - Zu jedem Dienst werden relevante Zugangsdaten und Links zur Nutzung bereitgestellt (z. B. Netzwerkpfade für Dateifreigaben oder Weblinks zu anderen Dashboards).
 
 4. **Account-Verwaltung**
-   - Nutzer können ihre Account-Informationen wie ihr Passwort ändern.
-   - **Ganz wichtig (Systeminteraktion):** Wenn ein Nutzer hier sein Passwort ändert, muss das Dashboard die entsprechenden Änderungen für den Linux-Benutzer auf Betriebssystemebene vornehmen (z. B. Abstimmung mit `/etc/passwd`, `/etc/shadow` und der Samba-Passwort-Datenbank).
-
-## Technologie
-*Hinweis für die weitere Umsetzung: Hier werden in Zukunft Details zum Stack (Frontend-Framework, Backend-Sprache, Anbindung an Linux-Systembefehle via z.B. Node.js/Python) hinterlegt.*
+   - Nutzer können ihre Account-Informationen eigenständig verwalten.
+   - Beispielsweise resultiert eine Passwortänderung im Dashboard in einer direkten Synchronisation der entsprechenden Passwörter auf Betriebssystemebene.

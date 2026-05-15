@@ -1,21 +1,26 @@
-# Samba Service
+# Samba Service Integration
 
-Dieser Ordner beschreibt das Setup und die Verwaltung des **Samba-Dienstes** für den Holistic Homeserver.
+Dieser Ordner enthält die Integrations- und Setup-Skripte für den **Samba-Dienst**. 
 
-Der Samba-Dienst stellt die grundlegende Dateifreigabe (Media Storage) für alle Familienmitglieder bereit, damit diese von ihren lokalen Endgeräten (Windows, Mac, etc.) aus auf dem Server lesen und schreiben können.
+Da die eigentliche Dienst-Implementierung und tiefergehende Dokumentation in ein separates Repository ausgelagert ist, finden sich hier ausschließlich die Skripte zur automatisierten Einrichtung dieses Services auf dem Holistic Homeserver.
 
-## Dokumentation
+## Setup im Rahmen des Holistic Homeservers
 
-Die vollständige technische Beschreibung, Rechteplanung, Architektur und Linux-zu-Windows-Übersetzungen (besonders nützlich für Windows-Programmierer) ist in der Datei [setup.md](./setup.md) dokumentiert.
+Die Einrichtung von Samba wird automatisch ausgeführt, wenn der Basis-Setup-Befehl des Systems aufgerufen wird:
 
-## Kontext-Überblick für KI und Dashboard
+```bash
+holistic setup
+```
 
-1. **Benutzer-Verknüpfung:** Samba nutzt direkt die nativen Ubuntu-Nutzer (`nanu`, `dada`, `mama`) durch die Samba-User-Gruppe `smbusers` und eine Synchronisation der Passwörter (`unix password sync = yes`).
-2. **Ordner-Struktur:**
-   - **Personal (Privat):** Jeder Benutzer hat automatisch ein eigenes Laufwerk (z. B. `\\<server>\dada`), auf das nur er Zugriff hat. In Linux gelöst über den Samba `[homes]`-Mechanismus und Ordnerrechte `0700`.
-   - **Family (Geteilt):** Es gibt ein geteiltes Familienverzeichnis (`\\<server>\family`), auf das alle Nutzer in der Gruppe `family` zugreifen und reinschreiben können (Linux SetGID `2770`).
-3. **Zusammenspiel mit dem Dashboard:** 
-   - Das Dashboard muss in der Lage sein, Linux-Passwörter zu aktualisieren. Sobald ein Passwort über das Dashboard geändert wird (`passwd` bzw. `smbpasswd`), greifen diese Änderungen auch für Samba-Logins.
-   - Das Dashboard liest die IP-Adresse und Sharenamen (z. B. basierend auf dem eingeloggten Profil) aus, um dem Anwender den direkten Pfad zu seinem SMB-Share anzuzeigen.
+Während der Iteration dieses Setups wird das hier liegende Installations-Skript getriggert. Es übernimmt die grundlegende Konfiguration von Samba auf dem System:
 
-Weitere Services werden in der Zukunft als benachbarte Order unter `/services/` angelegt.
+1. **Benutzer-Verknüpfung:** Synchronisation der nativen Ubuntu-Benutzer mit der Samba-Konfiguration.
+2. **Ordner-Netzwerkfreigaben:**
+   - Bereitstellung persönlicher (privater) Netzwerklaufwerke pro Nutzer.
+   - Bereitstellung von geteilten Bereichslaufwerken für berechtigte Gruppen (z. B. Family-Shares).
+
+## Dashboard Interaktion
+
+Das Dashboard integriert diesen Dienst wie folgt:
+- Darstellung der korrekten SMB-Netzwerkpfade (z.B. `\\<Server-IP>\<Benutzername>`) für den jeweils angemeldeten Benutzer.
+- Durchreichen von Passwortaktualisierungen (Ändert ein Benutzer über das Dashboard sein Passwort, so wird dieses implizit für den SMB-Zugriff mit angepasst).
