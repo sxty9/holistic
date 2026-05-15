@@ -1,0 +1,14 @@
+# Secrets / credentials — never commit
+.smbcreds*
+*.env
+.env*
+passdb.tdb
+secrets.tdb
+
+# Local tooling
+.claude/
+
+# OS / editor junk
+.DS_Store
+*.swp
+*~

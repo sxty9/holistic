@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+#
+# Holistic Homeserver — central orchestrator.
+#
+# Iterates the service manifest and runs each service's idempotent install.sh.
+# Safe to re-run: every service script must be idempotent (see service contract
+# in README.md / CLAUDE.md).
+#
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVICES_DIR="$REPO_ROOT/services"
+MANIFEST="$SERVICES_DIR/manifest"
+
+usage() {
+    cat <<'EOF'
+holistic — Holistic Homeserver orchestrator
+
+Usage:
+  holistic setup              Install/repair all services (manifest order)
+  holistic setup <service>    Install/repair a single service
+  holistic list               List services in install order
+  holistic status             Show which services have an install.sh
+  holistic help               Show this help
+
+Services are defined in services/manifest and live in services/<name>/install.sh.
+EOF
+}
+
+# Print service names from the manifest in order; ignore comments and blanks.
+read_manifest() {
+    if [[ ! -f "$MANIFEST" ]]; then
+        echo "[holistic] ERROR: manifest not found: $MANIFEST" >&2
+        exit 1
+    fi
+    grep -vE '^[[:space:]]*(#|$)' "$MANIFEST" | tr -d '[:blank:]'
+}
+
+run_service() {
+    local svc="$1"
+    local script="$SERVICES_DIR/$svc/install.sh"
+    if [[ ! -f "$script" ]]; then
+        echo "[holistic] ERROR: no install.sh for service '$svc' ($script)" >&2
+        return 1
+    fi
+    echo "[holistic] === installing service: $svc ==="
+    bash "$script"
+}
+
+cmd_setup() {
+    if [[ $# -ge 1 ]]; then
+        run_service "$1"
+        echo "[holistic] setup complete ($1)"
+        return
+    fi
+    local svc
+    while read -r svc; do
+        run_service "$svc"
+    done < <(read_manifest)
+    echo "[holistic] setup complete (all services)"
+}
+
+cmd_list() {
+    read_manifest
+}
+
+cmd_status() {
+    local svc
+    while read -r svc; do
+        if [[ -f "$SERVICES_DIR/$svc/install.sh" ]]; then
+            echo "  $svc: install.sh present"
+        else
+            echo "  $svc: MISSING install.sh"
+        fi
+    done < <(read_manifest)
+}
+
+main() {
+    local cmd="${1:-help}"
+    case "$cmd" in
+        setup)            shift; cmd_setup "$@" ;;
+        list)             cmd_list ;;
+        status)           cmd_status ;;
+        help|-h|--help)   usage ;;
+        *)
+            echo "[holistic] unknown command: $cmd" >&2
+            usage
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

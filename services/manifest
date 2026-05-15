@@ -1,0 +1,8 @@
+# Holistic service install order.
+#
+# One service directory name per line (relative to services/).
+# Each entry must have a matching services/<name>/install.sh.
+# Lines starting with '#' and blank lines are ignored.
+# Order matters: services are installed top-to-bottom by `holistic setup`.
+
+samba

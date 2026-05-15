@@ -1,12 +1,12 @@
-#!/bin/bash
-# 
+#!/usr/bin/env bash
+#
 # Holistic Homeserver - Samba Install Script
 #
-# Dieses Skript wird beim "holistic setup" Command ausgeführt.
-# Es installiert und konfiguriert den Samba-Dienst.
+# Runs as part of `holistic setup`. Installs and configures Samba.
+# Idempotent: safe to run multiple times.
 #
 
-set -e
+set -euo pipefail
 
 echo "[Holistic Setup] Starte Samba Installation..."
 
@@ -34,9 +34,11 @@ echo "Setze Berechtigungen für /srv/storage/users..."
 sudo chmod 0755 /srv/storage/users
 # Hinweis: Die Nutzerordner (0700) müssen bei der Nutzererstellung angelegt werden (z.B. useradd -m -d /srv/storage/users/$USER)
 
-# 5. Backup der alten Konfiguration machen
-if [ -f /etc/samba/smb.conf ]; then
-    sudo mv /etc/samba/smb.conf /etc/samba/smb.conf.backup
+# 5. Einmaliges Backup der originalen Konfiguration (idempotent:
+#    nur sichern, wenn noch kein Holistic-Backup existiert, damit
+#    ein zweiter Lauf nicht die echte Original-Config überschreibt)
+if [ -f /etc/samba/smb.conf ] && [ ! -f /etc/samba/smb.conf.holistic-backup ]; then
+    sudo cp /etc/samba/smb.conf /etc/samba/smb.conf.holistic-backup
 fi
 
 # 6. Neue smb.conf schreiben
@@ -92,5 +94,7 @@ sudo systemctl restart smbd nmbd
 sudo systemctl enable smbd nmbd
 
 
-echo "[Holistic Setup] Samba Installation erfolgreich abgeschlossen."
 echo "Hinweis: Nutzer muessen separat ueber das holistic dashboard/user management der gruppe 'smbusers' hinzugefügt werden und ein smbpasswd angelegt werden."
+
+# Vertrags-Statuszeile (siehe Service-Vertrag in README.md / CLAUDE.md)
+echo "[samba] installed and started"
