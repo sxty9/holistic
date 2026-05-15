@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-#
-# Holistic Homeserver — central orchestrator.
-#
-# Iterates the service manifest and runs each service's idempotent install.sh.
-# Safe to re-run: every service script must be idempotent (see service contract
-# in README.md / CLAUDE.md).
-#
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,17 +10,18 @@ usage() {
 holistic — Holistic Homeserver orchestrator
 
 Usage:
-  holistic setup              Install/repair all services (manifest order)
-  holistic setup <service>    Install/repair a single service
+  holistic setup              System prep + install all services
+  holistic setup <service>    Install/repair a single service (no system prep)
+  holistic user add <name>    Create a new family user (Linux + Samba + groups)
+  holistic update             Pull latest repo + re-run setup
   holistic list               List services in install order
-  holistic status             Show which services have an install.sh
+  holistic status             Show service install state
   holistic help               Show this help
-
-Services are defined in services/manifest and live in services/<name>/install.sh.
 EOF
 }
 
-# Print service names from the manifest in order; ignore comments and blanks.
+# --- helpers ---
+
 read_manifest() {
     if [[ ! -f "$MANIFEST" ]]; then
         echo "[holistic] ERROR: manifest not found: $MANIFEST" >&2
@@ -36,11 +30,42 @@ read_manifest() {
     grep -vE '^[[:space:]]*(#|$)' "$MANIFEST" | tr -d '[:blank:]'
 }
 
+require_root() {
+    if [[ $EUID -ne 0 ]]; then
+        echo "[holistic] ERROR: this command must run as root (use sudo)" >&2
+        exit 1
+    fi
+}
+
+# --- system prep ---
+
+system_prep() {
+    echo "[holistic] === system prep ==="
+
+    # Base packages
+    apt-get update -qq
+    apt-get install -y -qq curl git > /dev/null
+
+    # Base groups
+    getent group family   >/dev/null || groupadd family
+    getent group smbusers >/dev/null || groupadd smbusers
+
+    # Storage layout
+    mkdir -p /srv/storage/users
+    mkdir -p /srv/storage/family
+    chown root:family /srv/storage/family
+    chmod 2770 /srv/storage/family
+
+    echo "[holistic] system prep done"
+}
+
+# --- commands ---
+
 run_service() {
     local svc="$1"
     local script="$SERVICES_DIR/$svc/install.sh"
     if [[ ! -f "$script" ]]; then
-        echo "[holistic] ERROR: no install.sh for service '$svc' ($script)" >&2
+        echo "[holistic] ERROR: no install.sh for service '$svc'" >&2
         return 1
     fi
     echo "[holistic] === installing service: $svc ==="
@@ -48,16 +73,52 @@ run_service() {
 }
 
 cmd_setup() {
+    require_root
     if [[ $# -ge 1 ]]; then
         run_service "$1"
-        echo "[holistic] setup complete ($1)"
         return
     fi
+    system_prep
     local svc
     while read -r svc; do
         run_service "$svc"
     done < <(read_manifest)
-    echo "[holistic] setup complete (all services)"
+    echo "[holistic] setup complete"
+}
+
+cmd_user_add() {
+    require_root
+    local name="${1:-}"
+    if [[ -z "$name" ]]; then
+        echo "Usage: holistic user add <name>" >&2
+        exit 1
+    fi
+
+    if id "$name" &>/dev/null; then
+        echo "[holistic] ERROR: user '$name' already exists" >&2
+        exit 1
+    fi
+
+    echo "[holistic] creating user: $name"
+
+    useradd -m -d "/srv/storage/users/$name" -s /usr/sbin/nologin -U "$name"
+    usermod -aG family,smbusers "$name"
+    chown "$name:$name" "/srv/storage/users/$name"
+    chmod 0700 "/srv/storage/users/$name"
+
+    echo "[holistic] set SMB password for $name:"
+    smbpasswd -a "$name"
+    smbpasswd -e "$name"
+
+    echo "[holistic] user '$name' created (groups: family, smbusers)"
+}
+
+cmd_update() {
+    echo "[holistic] pulling latest..."
+    git -C "$REPO_ROOT" pull --ff-only
+
+    echo "[holistic] re-running setup..."
+    cmd_setup
 }
 
 cmd_list() {
@@ -68,20 +129,30 @@ cmd_status() {
     local svc
     while read -r svc; do
         if [[ -f "$SERVICES_DIR/$svc/install.sh" ]]; then
-            echo "  $svc: install.sh present"
+            echo "  $svc: installed"
         else
-            echo "  $svc: MISSING install.sh"
+            echo "  $svc: MISSING"
         fi
     done < <(read_manifest)
 }
 
+# --- main ---
+
 main() {
     local cmd="${1:-help}"
     case "$cmd" in
-        setup)            shift; cmd_setup "$@" ;;
-        list)             cmd_list ;;
-        status)           cmd_status ;;
-        help|-h|--help)   usage ;;
+        setup)          shift; cmd_setup "$@" ;;
+        user)
+            shift
+            case "${1:-}" in
+                add)    shift; cmd_user_add "$@" ;;
+                *)      echo "Usage: holistic user add <name>" >&2; exit 1 ;;
+            esac
+            ;;
+        update)         cmd_update ;;
+        list)           cmd_list ;;
+        status)         cmd_status ;;
+        help|-h|--help) usage ;;
         *)
             echo "[holistic] unknown command: $cmd" >&2
             usage
