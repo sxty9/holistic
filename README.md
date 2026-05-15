@@ -1,28 +1,34 @@
 # Holistic Homeserver
 
-Self-hosted home network hub on Ubuntu. Manages services (file sharing, media, smart home) through a single CLI.
+Ubuntu-based home server hub. Services run via a single CLI — Samba for file sharing now, media/smart home/game streaming later. Family users are native Linux accounts; no separate user database.
 
-## Quick start
+## Commands
 
 ```bash
-sudo ./holistic setup              # system prep + install all services
-sudo ./holistic setup samba        # install/repair one service
-sudo ./holistic user add <name>    # create family user (Linux + Samba)
+sudo ./holistic setup              # system prep + all services
+sudo ./holistic setup samba        # single service
+sudo ./holistic user add <name>    # new family user (Linux + Samba + groups)
 sudo ./holistic update             # git pull + re-run setup
-./holistic list                    # show services in install order
+./holistic list                    # services in install order
 ./holistic status                  # check install state
 ```
 
 ## Adding a service
 
-1. Create `services/<name>/install.sh` (idempotent, starts with `set -euo pipefail`, prints `[<name>] installed and started` on success)
-2. Add `<name>` to `services/manifest`
+Create `services/<name>/install.sh` and add `<name>` to `services/manifest`. The script runs as root, must be idempotent, and must print `[<name>] installed and started` on success.
 
-## Structure
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+# ... setup logic ...
+echo "[myservice] installed and started"
+```
 
-- `holistic` — CLI entry point
-- `services/manifest` — ordered list of services to install
-- `services/<name>/install.sh` — per-service installer
-- `dashboard/` — web portal (planned)
+## Layout
 
-Full architecture docs: [CLAUDE.md](CLAUDE.md)
+```
+holistic                        CLI entry point
+services/manifest               install order
+services/<name>/install.sh      per-service setup
+dashboard/                      web portal (planned)
+```
