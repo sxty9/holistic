@@ -1,28 +1,27 @@
-# Holistic Homeserver
-
-Ubuntu-based home server hub. Services run via a single CLI — Samba for file sharing now, media/smart home/game streaming later. Family users are native Linux accounts; no separate user database.
+# Holistic
 
 ## Commands
 
 ```bash
 sudo ./holistic setup              # system prep + all services
 sudo ./holistic setup samba        # single service
-sudo ./holistic user add <name>    # new family user (Linux + Samba + groups)
+sudo ./holistic user add <name>    # new user (Linux + Samba + groups)
 sudo ./holistic update             # git pull + re-run setup
 ./holistic list                    # services in install order
 ./holistic status                  # check install state
 ```
 
-## Adding a service
+## Connect (Samba)
 
-Create `services/<name>/install.sh` and add `<name>` to `services/manifest`. The script runs as root, must be idempotent, and must print `[<name>] installed and started` on success.
+| Platform | Path |
+|---|---|
+| Windows | `\\<server-ip>\<username>` or `\\<server-ip>\family` |
+| macOS | `smb://<server-ip>/<username>` or `smb://<server-ip>/family` |
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-# ... setup logic ...
-echo "[myservice] installed and started"
-```
+## Add a service
+
+Create `services/<name>/install.sh`, add `<name>` to `services/manifest`.
+Runs as root, must be idempotent, must print `[<name>] installed and started`.
 
 ## Layout
 
@@ -30,5 +29,4 @@ echo "[myservice] installed and started"
 holistic                        CLI entry point
 services/manifest               install order
 services/<name>/install.sh      per-service setup
-dashboard/                      web portal (planned)
 ```
