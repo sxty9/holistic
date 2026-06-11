@@ -1,0 +1,16 @@
+{
+  "name": "holistic-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @holistic/app dev",
+    "build": "pnpm --filter @holistic/app build",
+    "lint:services": "eslint --no-eslintrc -c eslint.services.cjs --ext .ts,.tsx ../services/*/ui"
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "^8.8.0",
+    "eslint": "^8.57.1",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.2"
+  }
+}

@@ -1,0 +1,6 @@
+# Installed to /etc/pam.d/holistic-dashboard.
+# Dedicated PAM service the dashboard authenticates logins against. pam_unix verifies
+# /etc/shadow via the setuid unix_chkpwd helper, so the unprivileged backend can check
+# any user's password without reading shadow itself.
+@include common-auth
+@include common-account

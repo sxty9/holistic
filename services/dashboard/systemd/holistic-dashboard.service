@@ -1,0 +1,17 @@
+[Unit]
+Description=Holistic Dashboard API
+After=network.target
+
+[Service]
+User=holistic
+Group=holistic
+Environment=HOLISTIC_SECRET_FILE=/etc/holistic/jwt-secret
+# Single worker: in-memory session-revocation/rate-limit state stays coherent.
+ExecStart=/opt/holistic/venv/bin/uvicorn holistic_api.main:app --host 127.0.0.1 --port 8770 --workers 1
+Restart=on-failure
+RestartSec=2
+# Must be false: the backend escalates via sudo to the narrow wrapper allowlist.
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target

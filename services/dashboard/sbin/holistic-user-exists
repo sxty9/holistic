@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# holistic-user-exists <username>   — Exit: 0 exists · 2 bad input · 3 missing.
+set -euo pipefail
+source /usr/local/lib/holistic/holistic-user.sh
+
+name="${1:-}"
+[[ "$name" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || exit 2
+holistic_user_exists "$name" && exit 0 || exit 3

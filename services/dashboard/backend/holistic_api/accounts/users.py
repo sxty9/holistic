@@ -1,0 +1,51 @@
+"""Read Linux account identity — the single source of truth for who a user is."""
+from __future__ import annotations
+
+import grp
+import os
+import pwd
+
+from ..config import settings
+
+# In dev (fake provision) we keep an in-memory registry so /auth/me works without real accounts.
+_DEV_USERS: dict[str, dict] = {}
+
+
+def dev_register(username: str, display_name: str, admin: bool = False) -> None:
+    _DEV_USERS[username] = {"displayName": display_name or username, "isAdmin": admin}
+
+
+def user_exists(username: str) -> bool:
+    if settings.dev_fake_provision:
+        return username in _DEV_USERS
+    try:
+        pwd.getpwnam(username)
+        return True
+    except KeyError:
+        return False
+
+
+def get_user_info(username: str) -> dict:
+    """Return {username, displayName, groups, isAdmin} from the OS (or the dev registry)."""
+    if settings.dev_fake_provision:
+        d = _DEV_USERS.get(username, {"displayName": username, "isAdmin": False})
+        groups = ["family", "smbusers"] + ([settings.admin_group] if d["isAdmin"] else [])
+        return {"username": username, "displayName": d["displayName"], "groups": groups, "isAdmin": d["isAdmin"]}
+
+    pw = pwd.getpwnam(username)
+    primary = grp.getgrgid(pw.pw_gid).gr_name
+    groups = {primary}
+    try:
+        for gid in os.getgrouplist(username, pw.pw_gid):
+            groups.add(grp.getgrgid(gid).gr_name)
+    except (KeyError, OSError):
+        for g in grp.getgrall():
+            if username in g.gr_mem:
+                groups.add(g.gr_name)
+    display = (pw.pw_gecos or "").split(",")[0].strip() or username
+    return {
+        "username": username,
+        "displayName": display,
+        "groups": sorted(groups),
+        "isAdmin": settings.admin_group in groups,
+    }

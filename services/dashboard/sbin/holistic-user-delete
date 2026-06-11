@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# holistic-user-delete <username> [--purge]
+# Removes the Samba + Linux account. --purge also deletes the home tree.
+# Exit: 0 ok · 2 bad input · 3 no such user.
+set -euo pipefail
+source /usr/local/lib/holistic/holistic-user.sh
+
+name="${1:-}"
+purge="${2:-}"
+[[ "$name" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || { echo "holistic-user-delete: invalid username" >&2; exit 2; }
+[[ -z "$purge" || "$purge" == "--purge" ]] || { echo "holistic-user-delete: bad flag" >&2; exit 2; }
+
+holistic_user_exists "$name" || { echo "holistic-user-delete: no such user" >&2; exit 3; }
+
+holistic_user_delete "$name" "$purge"

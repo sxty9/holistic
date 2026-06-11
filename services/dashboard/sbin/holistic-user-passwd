@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# holistic-user-passwd <username>   — new password on stdin (single line)
+# Sets BOTH the Linux and Samba password (closes the one-way unix-password-sync gap).
+# Exit: 0 ok · 2 bad input · 3 no such user.
+set -euo pipefail
+source /usr/local/lib/holistic/holistic-user.sh
+
+name="${1:-}"
+[[ "$name" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || { echo "holistic-user-passwd: invalid username" >&2; exit 2; }
+
+IFS= read -r pw || true
+[[ -n "$pw" ]] || { echo "holistic-user-passwd: empty password" >&2; exit 2; }
+
+holistic_user_exists "$name" || { echo "holistic-user-passwd: no such user" >&2; exit 3; }
+
+holistic_set_password "$name" "$pw"

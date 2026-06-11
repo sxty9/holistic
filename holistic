@@ -4,19 +4,29 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICES_DIR="$REPO_ROOT/services"
 MANIFEST="$SERVICES_DIR/manifest"
+DASHBOARD_DIR="$SERVICES_DIR/dashboard"
+INVITES_TOOL="$DASHBOARD_DIR/lib/holistic-invites.py"
+
+# Shared provisioning logic (single source of truth, also used by the sudo wrappers).
+source "$DASHBOARD_DIR/lib/holistic-user.sh"
 
 usage() {
     cat <<'EOF'
 holistic — Holistic Homeserver orchestrator
 
 Usage:
-  holistic setup              System prep + install all services
-  holistic setup <service>    Install/repair a single service (no system prep)
-  holistic user add <name>    Create a new family user (Linux + Samba + groups)
-  holistic update             Pull latest repo + re-run setup
-  holistic list               List services in install order
-  holistic status             Show service install state
-  holistic help               Show this help
+  holistic setup                    System prep + install all services
+  holistic setup <service>          Install/repair a single service (no system prep)
+  holistic user add <name> [label]  Create a user (Linux + Samba, both passwords)
+  holistic user passwd <name>       Change a user's password (Linux + Samba)
+  holistic user delete <name> [--purge]   Remove a user (--purge deletes their files)
+  holistic invite new [--note X] [--expires-days N]   Mint a registration invite code
+  holistic invite list              List invite codes and their state
+  holistic invite revoke <id>       Revoke an invite
+  holistic update                   Pull latest repo + re-run setup
+  holistic list                     List services in install order
+  holistic status                   Show service install state
+  holistic help                     Show this help
 EOF
 }
 
@@ -37,6 +47,16 @@ require_root() {
     fi
 }
 
+# Read a password twice from the terminal into $REPLY_PW (no echo).
+read_password_twice() {
+    local prompt="$1" pw pw2
+    read -r -s -p "$prompt" pw; echo
+    read -r -s -p "Repeat: " pw2; echo
+    [[ -n "$pw" ]] || { echo "[holistic] ERROR: empty password" >&2; return 1; }
+    [[ "$pw" == "$pw2" ]] || { echo "[holistic] ERROR: passwords do not match" >&2; return 1; }
+    REPLY_PW="$pw"
+}
+
 # --- system prep ---
 
 system_prep() {
@@ -44,11 +64,18 @@ system_prep() {
 
     # Base packages
     apt-get update -qq
-    apt-get install -y -qq curl git > /dev/null
+    apt-get install -y -qq curl git python3 > /dev/null
 
-    # Base groups
-    getent group family   >/dev/null || groupadd family
-    getent group smbusers >/dev/null || groupadd smbusers
+    # Groups
+    getent group family         >/dev/null || groupadd family
+    getent group smbusers       >/dev/null || groupadd smbusers
+    getent group holistic-admins >/dev/null || groupadd holistic-admins
+
+    # Unprivileged backend system user + its state dirs
+    getent passwd holistic >/dev/null || \
+        useradd --system --shell /usr/sbin/nologin --home-dir /var/lib/holistic holistic
+    install -d -o holistic -g holistic -m 0755 /etc/holistic
+    install -d -o holistic -g holistic -m 2750 /var/lib/holistic   # setgid: invites/secrets stay group-readable
 
     # Storage layout
     mkdir -p /srv/storage/users
@@ -56,7 +83,59 @@ system_prep() {
     chown root:family /srv/storage/family
     chmod 2770 /srv/storage/family
 
+    install_privileged_surface
+
     echo "[holistic] system prep done"
+}
+
+# Install the single-source-of-truth lib + sudo-gated wrappers + sudoers + PAM service.
+# These let `holistic user add` and the dashboard backend share identical provisioning.
+install_privileged_surface() {
+    [[ -d "$DASHBOARD_DIR" ]] || return 0
+    echo "[holistic] installing privileged surface (lib, wrappers, sudoers, pam)"
+
+    install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-user.sh"   /usr/local/lib/holistic/holistic-user.sh
+    install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-invites.py" /usr/local/lib/holistic/holistic-invites.py
+
+    local w
+    for w in holistic-user-add holistic-user-passwd holistic-user-delete \
+             holistic-user-exists holistic-invite-consume; do
+        install -m 0755 -o root -g root "$DASHBOARD_DIR/sbin/$w" "/usr/local/sbin/$w"
+    done
+
+    install -m 0644 "$DASHBOARD_DIR/pam.d/holistic-dashboard" /etc/pam.d/holistic-dashboard
+
+    # Sudoers: validate before trusting it.
+    install -m 0440 -o root -g root "$DASHBOARD_DIR/sudoers.d/holistic" /etc/sudoers.d/holistic
+    if ! visudo -cf /etc/sudoers.d/holistic >/dev/null; then
+        rm -f /etc/sudoers.d/holistic
+        echo "[holistic] ERROR: sudoers validation failed; removed" >&2
+        exit 1
+    fi
+
+    assert_safe_perms /usr/local/lib/holistic/holistic-user.sh \
+                      /usr/local/lib/holistic/holistic-invites.py \
+                      /usr/local/sbin/holistic-user-add \
+                      /usr/local/sbin/holistic-user-passwd \
+                      /usr/local/sbin/holistic-user-delete \
+                      /usr/local/sbin/holistic-user-exists \
+                      /usr/local/sbin/holistic-invite-consume
+}
+
+# A NOPASSWD-to-root wrapper that is group/other-writable is a root escalation. Refuse.
+assert_safe_perms() {
+    local f owner mode
+    for f in "$@"; do
+        [[ -e "$f" ]] || continue
+        owner="$(stat -c '%U' "$f")"
+        mode="$(stat -c '%a' "$f")"
+        if [[ "$owner" != "root" ]]; then
+            echo "[holistic] ERROR: $f not owned by root (owner=$owner)" >&2; exit 1
+        fi
+        if [[ "${mode: -1}" =~ [2367] || "${mode: -2:1}" =~ [2367] ]]; then
+            echo "[holistic] ERROR: $f is group/other-writable (mode=$mode)" >&2; exit 1
+        fi
+    done
 }
 
 # --- commands ---
@@ -89,28 +168,55 @@ cmd_setup() {
 cmd_user_add() {
     require_root
     local name="${1:-}"
-    if [[ -z "$name" ]]; then
-        echo "Usage: holistic user add <name>" >&2
-        exit 1
-    fi
+    [[ -z "$name" ]] && { echo "Usage: holistic user add <name> [display-name]" >&2; exit 1; }
+    shift
+    local gecos="${*:-}"
 
-    if id "$name" &>/dev/null; then
-        echo "[holistic] ERROR: user '$name' already exists" >&2
-        exit 1
-    fi
+    [[ "$name" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || { echo "[holistic] ERROR: invalid username" >&2; exit 1; }
+    holistic_user_exists "$name" && { echo "[holistic] ERROR: user '$name' already exists" >&2; exit 1; }
 
-    echo "[holistic] creating user: $name"
+    local REPLY_PW
+    read_password_twice "Password for $name: " || exit 1
 
-    useradd -m -d "/srv/storage/users/$name" -s /usr/sbin/nologin -U "$name"
-    usermod -aG family,smbusers "$name"
-    chown "$name:$name" "/srv/storage/users/$name"
-    chmod 0700 "/srv/storage/users/$name"
-
-    echo "[holistic] set SMB password for $name:"
-    smbpasswd -a "$name"
-    smbpasswd -e "$name"
+    holistic_user_create_account "$name" "$gecos"
+    holistic_set_linux_password "$name" "$REPLY_PW"
+    holistic_set_smb_password_new "$name" "$REPLY_PW"
+    holistic_admins_empty && holistic_make_admin "$name"
 
     echo "[holistic] user '$name' created (groups: family, smbusers)"
+}
+
+cmd_user_passwd() {
+    require_root
+    local name="${1:-}"
+    [[ -z "$name" ]] && { echo "Usage: holistic user passwd <name>" >&2; exit 1; }
+    holistic_user_exists "$name" || { echo "[holistic] ERROR: no such user '$name'" >&2; exit 1; }
+
+    local REPLY_PW
+    read_password_twice "New password for $name: " || exit 1
+    holistic_set_password "$name" "$REPLY_PW"
+
+    echo "[holistic] password updated for '$name' (Linux + Samba)"
+}
+
+cmd_user_delete() {
+    require_root
+    local name="${1:-}" purge="${2:-}"
+    [[ -z "$name" ]] && { echo "Usage: holistic user delete <name> [--purge]" >&2; exit 1; }
+    holistic_user_exists "$name" || { echo "[holistic] ERROR: no such user '$name'" >&2; exit 1; }
+    holistic_user_delete "$name" "$purge"
+    echo "[holistic] user '$name' deleted"
+}
+
+cmd_invite() {
+    require_root
+    local sub="${1:-}"; shift || true
+    case "$sub" in
+        new)    python3 "$INVITES_TOOL" new "$@" ;;
+        list)   python3 "$INVITES_TOOL" list ;;
+        revoke) python3 "$INVITES_TOOL" revoke "$@" ;;
+        *)      echo "Usage: holistic invite {new [--note X] [--expires-days N] | list | revoke <id>}" >&2; exit 1 ;;
+    esac
 }
 
 cmd_update() {
@@ -146,9 +252,12 @@ main() {
             shift
             case "${1:-}" in
                 add)    shift; cmd_user_add "$@" ;;
-                *)      echo "Usage: holistic user add <name>" >&2; exit 1 ;;
+                passwd) shift; cmd_user_passwd "$@" ;;
+                delete) shift; cmd_user_delete "$@" ;;
+                *)      echo "Usage: holistic user {add|passwd|delete} <name>" >&2; exit 1 ;;
             esac
             ;;
+        invite)         shift; cmd_invite "$@" ;;
         update)         cmd_update ;;
         list)           cmd_list ;;
         status)         cmd_status ;;

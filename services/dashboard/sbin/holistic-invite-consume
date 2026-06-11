@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# holistic-invite-consume <invite-id> <username>
+# Atomically marks an invite used (the only invite verb the backend may run via sudo).
+# Exit: 0 ok · 2 bad input · 4 unknown · 5 already used · 6 expired.
+set -euo pipefail
+exec python3 /usr/local/lib/holistic/holistic-invites.py consume "$@"

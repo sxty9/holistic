@@ -1,0 +1,106 @@
+/* Apple-inspired design tokens. Light by default; dark via [data-theme="dark"] or the
+   system preference. SDK components consume these through the Tailwind preset
+   (bg-surface, text-primary, rounded-card, shadow-elev-2, …). */
+
+:root {
+  --accent: #0a84ff;
+  --accent-hover: #0070e0;
+  --accent-fg: #ffffff;
+
+  --bg-base: #f2f2f7;
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-raised: #ffffff;
+  --sidebar: rgba(246, 246, 248, 0.65);
+  --separator: rgba(60, 60, 67, 0.18);
+
+  --text-primary: rgba(0, 0, 0, 0.92);
+  --text-secondary: rgba(60, 60, 67, 0.6);
+  --text-tertiary: rgba(60, 60, 67, 0.3);
+
+  --success: #34c759;
+  --warning: #ff9f0a;
+  --danger: #ff3b30;
+
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-card: 14px;
+  --radius-lg: 20px;
+  --radius-2xl: 28px;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.22);
+
+  --blur-vibrancy: saturate(180%) blur(30px);
+  --blur-thin: blur(20px);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --font-sans: -apple-system, "SF Pro Text", "SF Pro Display", "Inter", system-ui, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, "Menlo", monospace;
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --accent: #0a84ff;
+  --accent-hover: #3d9bff;
+
+  --bg-base: #000000;
+  --surface: rgba(28, 28, 30, 0.72);
+  --surface-raised: #1c1c1e;
+  --sidebar: rgba(20, 20, 22, 0.55);
+  --separator: rgba(255, 255, 255, 0.12);
+
+  --text-primary: rgba(255, 255, 255, 0.96);
+  --text-secondary: rgba(235, 235, 245, 0.6);
+  --text-tertiary: rgba(235, 235, 245, 0.3);
+
+  --success: #30d158;
+  --warning: #ffd60a;
+  --danger: #ff453a;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.55);
+  --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.7);
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --accent-hover: #3d9bff;
+    --bg-base: #000000;
+    --surface: rgba(28, 28, 30, 0.72);
+    --surface-raised: #1c1c1e;
+    --sidebar: rgba(20, 20, 22, 0.55);
+    --separator: rgba(255, 255, 255, 0.12);
+    --text-primary: rgba(255, 255, 255, 0.96);
+    --text-secondary: rgba(235, 235, 245, 0.6);
+    --text-tertiary: rgba(235, 235, 245, 0.3);
+    --success: #30d158;
+    --warning: #ffd60a;
+    --danger: #ff453a;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.55);
+    --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.7);
+    color-scheme: dark;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}

@@ -5,6 +5,17 @@
 passdb.tdb
 secrets.tdb
 
+# Frontend build artifacts
+node_modules/
+dist/
+*.local
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
 # Local tooling
 .claude/
 

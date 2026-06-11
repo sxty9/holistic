@@ -6,3 +6,4 @@
 # Order matters: services are installed top-to-bottom by `holistic setup`.
 
 samba
+dashboard

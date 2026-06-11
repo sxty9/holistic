@@ -1,0 +1,11 @@
+{
+  "name": "@holistic/service-samba",
+  "private": true,
+  "type": "module",
+  "comment": "Not a workspace member — pulled into the host bundle by the build-time registry. Deps here document the import allowlist enforced by eslint.services.cjs.",
+  "dependencies": {
+    "@holistic/ui": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

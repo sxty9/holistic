@@ -1,0 +1,295 @@
+#!/usr/bin/env python3
+"""holistic-fs — per-user file broker.
+
+Invoked ONLY as `sudo -u <user> holistic-fs <op> …` (or directly as the user in dev).
+Because it runs as the target Linux user, the kernel enforces access to
+/srv/storage/users/<user> (0700) and /srv/storage/family (group). It ALSO re-validates
+every path against the user's roots (defense in depth) so a backend bug still can't escape.
+
+Subcommands:
+  stat   <abspath>
+  list   <absdir>
+  read   <abspath> [--offset N] [--length M]      -> raw bytes on stdout
+  write  <absfile>                                 -> bytes from stdin (O_CREAT|O_EXCL)
+  mkdir  <absdir>
+  rename <abspath> <newname>
+  move   <abssrc> <absdstdir>
+  copy   <abssrc> <absdstdir>
+  delete <abspath> [--recursive]
+
+Metadata ops print JSON; `read` writes raw bytes. Exit: 0 ok · 2 bad request · 3 denied · 4 not found · 5 exists.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import mimetypes
+import os
+import pwd
+import re
+import shutil
+import stat as statmod
+import sys
+
+SAFE_NAME = re.compile(r"^[^\x00-\x1f/\\]{1,255}$")
+CODE_EXT = {
+    "js", "ts", "tsx", "jsx", "py", "sh", "bash", "c", "h", "cpp", "hpp", "go", "rs", "java",
+    "rb", "php", "css", "scss", "html", "xml", "json", "yaml", "yml", "toml", "ini", "conf",
+    "cfg", "md", "markdown", "log", "csv", "tsv", "sql", "txt",
+}
+
+
+def fail(code: int, msg: str) -> None:
+    print(f"holistic-fs: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+def allowed_roots() -> list[str]:
+    user = os.environ.get("HOLISTIC_FS_USER") or pwd.getpwuid(os.getuid()).pw_name
+    users_root = os.environ.get("HOLISTIC_USERS_ROOT", "/srv/storage/users")
+    family_root = os.environ.get("HOLISTIC_FAMILY_ROOT", "/srv/storage/family")
+    return [os.path.realpath(os.path.join(users_root, user)), os.path.realpath(family_root)]
+
+
+def _within(real: str) -> bool:
+    for base in allowed_roots():
+        if real == base or real.startswith(base + os.sep):
+            return True
+    return False
+
+
+def validate(path: str) -> str:
+    """Validate an existing path resolves inside the user's roots; return its realpath."""
+    if "\x00" in path:
+        fail(2, "null byte in path")
+    real = os.path.realpath(path)
+    if not _within(real):
+        fail(3, "path outside allowed roots")
+    return real
+
+
+def validate_new(parent: str, name: str) -> str:
+    """Validate a to-be-created child `name` under existing dir `parent`."""
+    if name in ("", ".", "..") or not SAFE_NAME.match(name) or name.startswith("."):
+        fail(2, "invalid name")
+    base = validate(parent)
+    if not os.path.isdir(base):
+        fail(4, "parent is not a directory")
+    target = os.path.realpath(os.path.join(base, name))
+    if not _within(target):
+        fail(3, "target outside allowed roots")
+    return target
+
+
+def _looks_text(path: str) -> bool:
+    try:
+        with open(path, "rb") as fh:
+            chunk = fh.read(1024)
+    except OSError:
+        return False
+    return b"\x00" not in chunk
+
+
+def classify(path: str, name: str) -> tuple[str | None, str | None]:
+    mime, _ = mimetypes.guess_type(name)
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    viewer: str | None = None
+    if mime:
+        if mime.startswith("image/"):
+            viewer = "image"
+        elif mime.startswith("video/"):
+            viewer = "video"
+        elif mime.startswith("audio/"):
+            viewer = "audio"
+        elif mime == "application/pdf":
+            viewer = "pdf"
+    is_text = bool(mime and mime.startswith("text/")) or ext in CODE_EXT
+    if viewer is None and is_text:
+        viewer = "markdown" if ext in ("md", "markdown") else "text"
+    if viewer is None and mime is None and _looks_text(path):
+        viewer = "text"
+    return mime, viewer
+
+
+def entry_for(path: str, name: str | None = None) -> dict:
+    st = os.stat(path)
+    name = name if name is not None else os.path.basename(path)
+    is_dir = statmod.S_ISDIR(st.st_mode)
+    mime, viewer = (None, None) if is_dir else classify(path, name)
+    return {
+        "name": name,
+        "kind": "dir" if is_dir else "file",
+        "size": 0 if is_dir else st.st_size,
+        "mtime": int(st.st_mtime * 1000),
+        "mime": mime,
+        "viewer": viewer,
+        "permissions": statmod.filemode(st.st_mode),
+    }
+
+
+# --- subcommands -----------------------------------------------------------
+
+def cmd_stat(a):
+    real = validate(a.path)
+    if not os.path.exists(real):
+        fail(4, "not found")
+    print(json.dumps(entry_for(real)))
+
+
+def cmd_list(a):
+    real = validate(a.path)
+    if not os.path.isdir(real):
+        fail(4, "not a directory")
+    entries = []
+    with os.scandir(real) as it:
+        for de in it:
+            try:
+                entries.append(entry_for(de.path, de.name))
+            except OSError:
+                continue
+    entries.sort(key=lambda e: (e["kind"] != "dir", e["name"].lower()))
+    print(json.dumps({"entries": entries}))
+
+
+def cmd_read(a):
+    real = validate(a.path)
+    if not os.path.isfile(real):
+        fail(4, "not a file")
+    offset = max(0, a.offset or 0)
+    remaining = a.length if a.length is not None else None
+    out = sys.stdout.buffer
+    with open(real, "rb") as fh:
+        if offset:
+            fh.seek(offset)
+        while True:
+            want = 1024 * 1024 if remaining is None else min(1024 * 1024, remaining)
+            if want <= 0:
+                break
+            chunk = fh.read(want)
+            if not chunk:
+                break
+            out.write(chunk)
+            if remaining is not None:
+                remaining -= len(chunk)
+    out.flush()
+
+
+def cmd_write(a):
+    target = validate_new(os.path.dirname(a.path), os.path.basename(a.path))
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    try:
+        fd = os.open(target, flags, 0o644)
+    except FileExistsError:
+        fail(5, "already exists")
+    try:
+        with os.fdopen(fd, "wb") as out:
+            shutil.copyfileobj(sys.stdin.buffer, out, length=1024 * 1024)
+    except BaseException:
+        try:
+            os.unlink(target)
+        except OSError:
+            pass
+        raise
+    print(json.dumps(entry_for(target)))
+
+
+def cmd_mkdir(a):
+    target = validate_new(os.path.dirname(a.path.rstrip("/")), os.path.basename(a.path.rstrip("/")))
+    try:
+        os.mkdir(target, 0o755)
+    except FileExistsError:
+        fail(5, "already exists")
+    print(json.dumps(entry_for(target)))
+
+
+def cmd_rename(a):
+    real = validate(a.path)
+    if not os.path.exists(real):
+        fail(4, "not found")
+    target = validate_new(os.path.dirname(real), a.newname)
+    if os.path.exists(target):
+        fail(5, "target exists")
+    os.rename(real, target)
+    print(json.dumps(entry_for(target)))
+
+
+def cmd_move(a):
+    src = validate(a.src)
+    if not os.path.exists(src):
+        fail(4, "not found")
+    dstdir = validate(a.dstdir)
+    if not os.path.isdir(dstdir):
+        fail(4, "destination is not a directory")
+    target = validate_new(dstdir, os.path.basename(src.rstrip("/")))
+    if os.path.exists(target):
+        fail(5, "target exists")
+    shutil.move(src, target)
+    print(json.dumps(entry_for(target)))
+
+
+def cmd_copy(a):
+    src = validate(a.src)
+    if not os.path.exists(src):
+        fail(4, "not found")
+    dstdir = validate(a.dstdir)
+    target = validate_new(dstdir, os.path.basename(src.rstrip("/")))
+    if os.path.exists(target):
+        fail(5, "target exists")
+    if os.path.isdir(src):
+        shutil.copytree(src, target)
+    else:
+        shutil.copy2(src, target)
+    print(json.dumps(entry_for(target)))
+
+
+def cmd_delete(a):
+    real = validate(a.path)
+    if not os.path.exists(real):
+        fail(4, "not found")
+    if os.path.isdir(real):
+        if a.recursive:
+            shutil.rmtree(real)
+        else:
+            os.rmdir(real)
+    else:
+        os.unlink(real)
+    print(json.dumps({"ok": True}))
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(prog="holistic-fs")
+    sub = p.add_subparsers(dest="cmd", required=True)
+    for name in ("stat", "list"):
+        sp = sub.add_parser(name)
+        sp.add_argument("path")
+        sp.set_defaults(fn=globals()[f"cmd_{name}"])
+    sr = sub.add_parser("read")
+    sr.add_argument("path")
+    sr.add_argument("--offset", type=int, default=0)
+    sr.add_argument("--length", type=int, default=None)
+    sr.set_defaults(fn=cmd_read)
+    for name in ("write", "mkdir"):
+        sp = sub.add_parser(name)
+        sp.add_argument("path")
+        sp.set_defaults(fn=globals()[f"cmd_{name}"])
+    sren = sub.add_parser("rename")
+    sren.add_argument("path")
+    sren.add_argument("newname")
+    sren.set_defaults(fn=cmd_rename)
+    for name in ("move", "copy"):
+        sp = sub.add_parser(name)
+        sp.add_argument("src")
+        sp.add_argument("dstdir")
+        sp.set_defaults(fn=globals()[f"cmd_{name}"])
+    sd = sub.add_parser("delete")
+    sd.add_argument("path")
+    sd.add_argument("--recursive", action="store_true")
+    sd.set_defaults(fn=cmd_delete)
+
+    args = p.parse_args()
+    args.fn(args)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
