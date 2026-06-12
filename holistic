@@ -66,10 +66,9 @@ system_prep() {
     apt-get update -qq
     apt-get install -y -qq curl git python3 > /dev/null
 
-    # Groups
+    # Groups (admin = the OS sudo group, not an app-managed group)
     getent group family         >/dev/null || groupadd family
     getent group smbusers       >/dev/null || groupadd smbusers
-    getent group holistic-admins >/dev/null || groupadd holistic-admins
 
     # Unprivileged backend system user + its state dirs
     getent passwd holistic >/dev/null || \
@@ -181,7 +180,6 @@ cmd_user_add() {
     holistic_user_create_account "$name" "$gecos"
     holistic_set_linux_password "$name" "$REPLY_PW"
     holistic_set_smb_password_new "$name" "$REPLY_PW"
-    holistic_admins_empty && holistic_make_admin "$name"
 
     echo "[holistic] user '$name' created (groups: family, smbusers)"
 }

@@ -11,7 +11,8 @@
 
 HOLISTIC_USERS_ROOT="${HOLISTIC_USERS_ROOT:-/srv/storage/users}"
 HOLISTIC_GROUPS="${HOLISTIC_GROUPS:-family,smbusers}"
-HOLISTIC_ADMIN_GROUP="${HOLISTIC_ADMIN_GROUP:-holistic-admins}"
+# Admin status is the Linux sudo group (single source of truth), granted by the OS —
+# not provisioned here, so this lib no longer manages an admin group.
 
 # 0 if the Linux account exists.
 holistic_user_exists() {
@@ -59,15 +60,4 @@ holistic_user_delete() {
     else
         userdel "$1"
     fi
-}
-
-# 0 (true) if the admin group has no members yet (used to bootstrap the first admin).
-holistic_admins_empty() {
-    local members
-    members="$(getent group "$HOLISTIC_ADMIN_GROUP" 2>/dev/null | awk -F: '{print $4}')"
-    [[ -z "$members" ]]
-}
-
-holistic_make_admin() {
-    usermod -aG "$HOLISTIC_ADMIN_GROUP" "$1"
 }

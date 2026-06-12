@@ -7,5 +7,6 @@ export default {
     './src/**/*.{ts,tsx}',
     '../packages/ui/src/**/*.{ts,tsx}',
     '../../services/*/ui/**/*.{ts,tsx}',
+    '../external/*/**/*.{ts,tsx}',
   ],
 };

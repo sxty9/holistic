@@ -55,6 +55,7 @@ systemctl restart holistic-dashboard
 
 echo "[dashboard] configuring Caddy..."
 install -d /etc/caddy
+install -d /etc/caddy/conf.d   # drop-in dir for per-service routes (e.g. hostek); imported by the Caddyfile
 install -m 0644 "$HERE/caddy/Caddyfile" /etc/caddy/Caddyfile
 systemctl reload caddy 2>/dev/null || systemctl restart caddy || true
 

@@ -3,6 +3,13 @@
 # `tls internal` uses Caddy's local CA; trust it once on each client, or swap in
 # mkcert-generated certs with:  tls /etc/holistic/cert.pem /etc/holistic/key.pem
 holistic.local {
+	# Per-service routes contributed by other holistic services (e.g. hostek drops a
+	# `handle /api/services/<id>/* { reverse_proxy 127.0.0.1:<port> }` block here).
+	# Caddy routes `handle` blocks by matcher specificity (most-specific path wins), so
+	# /api/services/<id>/* takes precedence over the generic /api/* below regardless of
+	# import order. A missing/empty conf.d matches nothing.
+	import /etc/caddy/conf.d/*.caddy
+
 	handle /api/* {
 		reverse_proxy 127.0.0.1:8770
 	}

@@ -97,6 +97,7 @@ const TEXT_COLOR = {
   accent: 'text-accent',
   danger: 'text-danger',
   success: 'text-success',
+  warning: 'text-warning',
 } as const;
 const WEIGHT = { normal: 'font-normal', medium: 'font-medium', semibold: 'font-semibold', bold: 'font-bold' } as const;
 
@@ -138,17 +139,19 @@ const BADGE = {
   neutral: 'bg-fill/20 text-text-secondary',
   accent: 'bg-accent/15 text-accent',
   success: 'bg-success/15 text-success',
+  warning: 'bg-warning/15 text-warning',
   danger: 'bg-danger/15 text-danger',
 } as const;
 export function Badge({ variant = 'neutral', className, children }: { variant?: keyof typeof BADGE; className?: string; children: ReactNode }) {
   return <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-caption font-medium', BADGE[variant], className)}>{children}</span>;
 }
 
-export function ProgressBar({ value, indeterminate, className }: { value?: number; indeterminate?: boolean; className?: string }) {
+const BAR_TONE = { accent: 'bg-accent', success: 'bg-success', warning: 'bg-warning', danger: 'bg-danger' } as const;
+export function ProgressBar({ value, indeterminate, tone = 'accent', className }: { value?: number; indeterminate?: boolean; tone?: keyof typeof BAR_TONE; className?: string }) {
   return (
     <div className={cn('h-1.5 w-full overflow-hidden rounded-full bg-fill/20', className)}>
       <div
-        className={cn('h-full rounded-full bg-accent transition-[width] duration-base ease-out', indeterminate && 'w-1/3 animate-pulse')}
+        className={cn('h-full rounded-full transition-[width] duration-base ease-out', BAR_TONE[tone], indeterminate && 'w-1/3 animate-pulse')}
         style={indeterminate ? undefined : { width: `${Math.max(0, Math.min(100, value ?? 0))}%` }}
       />
     </div>

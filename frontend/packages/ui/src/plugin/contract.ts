@@ -5,7 +5,7 @@ export interface HolisticUser {
   username: string; // Linux account name (== Samba user)
   displayName: string; // human label for the top bar
   groups: string[]; // e.g. ["family","smbusers"]
-  isAdmin: boolean; // member of holistic-admins
+  isAdmin: boolean; // member of the admin group (Linux sudo — single source of truth)
 }
 
 /** A service-scoped, already-authenticated API client. Base URL is

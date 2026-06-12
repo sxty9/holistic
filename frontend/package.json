@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "pnpm --filter @holistic/app dev",
     "build": "pnpm --filter @holistic/app build",
-    "lint:services": "eslint --no-eslintrc -c eslint.services.cjs --ext .ts,.tsx ../services/*/ui"
+    "lint:services": "pnpm --filter @holistic/app lint:services"
   },
   "devDependencies": {
     "@typescript-eslint/parser": "^8.8.0",

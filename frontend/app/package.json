@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "lint:services": "eslint --no-eslintrc -c ../eslint.services.cjs --resolve-plugins-relative-to .. --no-error-on-unmatched-pattern --ext .ts,.tsx ../../services/*/ui",
+    "lint:services": "eslint --no-eslintrc -c ../eslint.services.cjs --resolve-plugins-relative-to .. --no-error-on-unmatched-pattern --ext .ts,.tsx ../../services/*/ui ../external/*",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "pnpm run lint:services && pnpm run typecheck && vite build",
     "preview": "vite preview"

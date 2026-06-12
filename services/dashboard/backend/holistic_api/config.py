@@ -33,7 +33,9 @@ class Settings:
     refresh_ttl: int = 7 * 86400
 
     pam_service: str = os.environ.get("HOLISTIC_PAM_SERVICE", "holistic-dashboard")
-    admin_group: str = os.environ.get("HOLISTIC_ADMIN_GROUP", "holistic-admins")
+    # Admin = single Linux source of truth: membership in the sudo group (Ubuntu `sudo`;
+    # `wheel` on RHEL). No parallel app-managed admin group.
+    admin_group: str = os.environ.get("HOLISTIC_ADMIN_GROUP", "sudo")
 
     users_root: str = os.environ.get("HOLISTIC_USERS_ROOT", "/srv/storage/users")
     family_root: str = os.environ.get("HOLISTIC_FAMILY_ROOT", "/srv/storage/family")

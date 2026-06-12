@@ -58,6 +58,21 @@ export { AuthScene, AuthCard, HolisticMark } from './auth';
 // Code
 export { CodeBlock } from './code';
 
+// Metrics & data visualization
+export { LineChart, Sparkline } from './charts';
+export type { ChartSeries, LineChartProps, SparklineProps } from './charts';
+export { Gauge, Donut, toneForLoad } from './gauge';
+export type { Tone, GaugeProps, DonutProps, DonutSegment } from './gauge';
+export { Stat } from './stat';
+export type { StatProps, StatDelta } from './stat';
+export { DataTable } from './table';
+export type { Column, DataTableProps, SortDir } from './table';
+
+// Formatting & data hooks
+export { formatPercent, formatRate, formatDuration } from './lib/format';
+export { useLiveQuery } from './lib/useLiveQuery';
+export type { LiveQuery } from './lib/useLiveQuery';
+
 // Files (cloud-style file manager)
 export { FileEntryIcon, Breadcrumb, UploadControl } from './files/parts';
 export type { BreadcrumbSegment } from './files/parts';

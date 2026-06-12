@@ -10,6 +10,9 @@ node_modules/
 dist/
 *.local
 
+# External service-UI plugins linked in at install time (e.g. hostek)
+frontend/external/
+
 # Python
 __pycache__/
 *.pyc

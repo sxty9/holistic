@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # holistic-user-add <username> [display-name]   — password on stdin (single line)
-# Creates a Linux+Samba account, sets BOTH passwords, bootstraps the first admin.
+# Creates a Linux+Samba account and sets BOTH passwords. Admin status is NOT granted
+# here: admin = membership in the Linux sudo group (single source of truth).
 # Exit: 0 ok · 2 bad input · 3 user exists.
 set -euo pipefail
 source /usr/local/lib/holistic/holistic-user.sh
@@ -20,8 +21,3 @@ holistic_user_exists "$name" && { echo "holistic-user-add: user exists" >&2; exi
 holistic_user_create_account "$name" "$gecos"
 holistic_set_linux_password "$name" "$pw"
 holistic_set_smb_password_new "$name" "$pw"
-
-# First account on the system becomes the admin.
-if holistic_admins_empty; then
-    holistic_make_admin "$name"
-fi
