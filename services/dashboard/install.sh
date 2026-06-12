@@ -13,7 +13,17 @@ WWW="$APP/www"
 VENV="$APP/venv"
 
 echo "[dashboard] installing system packages..."
-apt-get install -y -qq python3-venv caddy openssl >/dev/null 2>&1 || apt-get install -y -qq python3-venv openssl >/dev/null
+# Caddy is not in Ubuntu's default repos — add the official Caddy apt repo first,
+# otherwise `apt-get install caddy` fails and the dashboard has no reverse proxy.
+if ! command -v caddy >/dev/null; then
+    apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https curl gnupg >/dev/null
+    curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
+        | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
+        > /etc/apt/sources.list.d/caddy-stable.list
+    apt-get update -qq
+fi
+apt-get install -y -qq python3-venv caddy openssl >/dev/null
 
 # Node 20 + pnpm for the frontend build.
 if ! command -v node >/dev/null; then

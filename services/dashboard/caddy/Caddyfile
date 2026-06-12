@@ -1,8 +1,10 @@
-# Holistic dashboard — static SPA + /api proxy, local TLS.
-# Access at https://holistic.local (add it to /etc/hosts or your router DNS).
-# `tls internal` uses Caddy's local CA; trust it once on each client, or swap in
-# mkcert-generated certs with:  tls /etc/holistic/cert.pem /etc/holistic/key.pem
-holistic.local {
+# Holistic dashboard — static SPA + /api proxy.
+# LAN:    https://holistic.local  (`tls internal`; trust Caddy's local CA once per client,
+#         or swap in certs:  tls /etc/holistic/cert.pem /etc/holistic/key.pem)
+# Public: via the Cloudflare tunnel (sxgate) → the loopback listener below. Cloudflare
+#         terminates public TLS, so that hop is plain HTTP on 127.0.0.1 only.
+
+(holistic_app) {
 	# Per-service routes contributed by other holistic services (e.g. hostek drops a
 	# `handle /api/services/<id>/* { reverse_proxy 127.0.0.1:<port> }` block here).
 	# Caddy routes `handle` blocks by matcher specificity (most-specific path wins), so
@@ -18,5 +20,15 @@ holistic.local {
 		try_files {path} /index.html
 		file_server
 	}
+}
+
+holistic.local {
+	import holistic_app
 	tls internal
+}
+
+# Cloudflare-tunnel origin: loopback-only HTTP, reachable only by cloudflared (sxgate
+# routes holistic.henrysoase.org → http://localhost:21487). Not exposed on the LAN.
+http://127.0.0.1:21487 {
+	import holistic_app
 }
