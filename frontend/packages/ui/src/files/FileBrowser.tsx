@@ -190,11 +190,11 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
     >
       <div className="grid gap-2 px-3 py-1.5 text-caption font-medium text-text-tertiary border-b border-separator" style={LIST_TEMPLATE}>
         <span className="truncate">Name</span>
-        <span className="relative text-right">
+        <span className="relative pl-2">
           Size
           <ColumnResizeHandle onPointerDown={(e) => beginColumnResize(e, 'size')} />
         </span>
-        <span className="relative text-right">
+        <span className="relative pl-2">
           Modified
           <ColumnResizeHandle onPointerDown={(e) => beginColumnResize(e, 'modified')} />
         </span>
