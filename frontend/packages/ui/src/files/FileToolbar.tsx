@@ -1,5 +1,5 @@
-import { Button, SearchField, SegmentedControl } from '../controls';
-import { CopyIcon, DownloadIcon, FolderPlusIcon, GridIcon, ListIcon, MoveIcon, PencilIcon, TrashIcon } from '../icons';
+import { Button, IconButton, SearchField, SegmentedControl } from '../controls';
+import { ArrowUpIcon, CopyIcon, DownloadIcon, FolderPlusIcon, GridIcon, ListIcon, MoveIcon, PencilIcon, TrashIcon } from '../icons';
 import { Text } from '../primitives';
 import type { FileEntry } from '../plugin/contract';
 import { UploadControl } from './parts';
@@ -12,17 +12,29 @@ export interface FileToolbarProps {
   onSearch: (s: string) => void;
   selection: FileEntry[];
   canWrite: boolean;
+  /** Whether the current folder has a parent within this share (false at a root). */
+  canGoUp: boolean;
+  onNavigateUp: () => void;
   onNewFolder: () => void;
   onUpload: (files: File[]) => void;
   onAction: (action: FileActionId, entries: FileEntry[]) => void;
 }
 
-export function FileToolbar({ view, onViewChange, search, onSearch, selection, canWrite, onNewFolder, onUpload, onAction }: FileToolbarProps) {
+export function FileToolbar({ view, onViewChange, search, onSearch, selection, canWrite, canGoUp, onNavigateUp, onNewFolder, onUpload, onAction }: FileToolbarProps) {
   const hasSel = selection.length > 0;
   const onlyFiles = hasSel && selection.every((s) => s.kind === 'file');
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-2">
+        <IconButton
+          label="Parent folder"
+          variant="secondary"
+          size="sm"
+          onClick={onNavigateUp}
+          disabled={!canGoUp}
+        >
+          <ArrowUpIcon className="h-4 w-4" />
+        </IconButton>
         {hasSel ? (
           <>
             <Text variant="footnote" color="secondary">

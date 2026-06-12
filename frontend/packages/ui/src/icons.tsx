@@ -40,6 +40,7 @@ export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />);
 export const ChevronRightIcon = icon(<path d="m9 6 6 6-6 6" />);
 export const ChevronLeftIcon = icon(<path d="m15 6-6 6 6 6" />);
 export const ChevronDownIcon = icon(<path d="m6 9 6 6 6-6" />);
+export const ArrowUpIcon = icon(<><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></>);
 export const GridIcon = icon(<><rect x="4" y="4" width="6" height="6" rx="1.4" /><rect x="14" y="4" width="6" height="6" rx="1.4" /><rect x="4" y="14" width="6" height="6" rx="1.4" /><rect x="14" y="14" width="6" height="6" rx="1.4" /></>);
 export const ListIcon = icon(<><path d="M8 6h12M8 12h12M8 18h12" /><circle cx="4" cy="6" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="4" cy="18" r="1" /></>);
 export const SearchIcon = icon(<><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>);

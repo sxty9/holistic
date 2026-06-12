@@ -87,6 +87,7 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
 
   const currentRoot = roots.find((r) => cwd === r.key || cwd.startsWith(r.key + '/'));
   const canWrite = currentRoot?.writable ?? true;
+  const canGoUp = cwd.includes('/'); // false at a share root — nothing above it
   const filtered = search ? entries.filter((e) => e.name.toLowerCase().includes(search.toLowerCase())) : entries;
   const selectedEntries = entries.filter((e) => selection.has(e.path));
   const cutPaths = clipboard?.mode === 'move' ? new Set(clipboard.items.map((i) => i.path)) : undefined;
@@ -238,6 +239,8 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
               onSearch={setSearch}
               selection={selectedEntries}
               canWrite={canWrite}
+              canGoUp={canGoUp}
+              onNavigateUp={() => navigate(parentOf(cwd))}
               onNewFolder={() => setNewFolderOpen(true)}
               onUpload={doUpload}
               onAction={handleAction}
