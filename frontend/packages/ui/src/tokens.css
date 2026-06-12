@@ -2,8 +2,29 @@
    system preference. SDK components consume these through the Tailwind preset
    (bg-surface, text-primary, rounded-card, shadow-elev-2, …). */
 
+/* San Francisco wins on Apple platforms via -apple-system; everyone else gets Inter
+   (a near-SF variable face). Vite fingerprints the relative url() at build time. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/InterVariable.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/InterVariable-Italic.woff2") format("woff2");
+}
+
 :root {
-  --accent: #0a84ff;
+  /* Colors used with Tailwind /opacity modifiers are stored as space-separated RGB
+     channels and mapped through rgb(var(--x) / <alpha-value>) in the preset, so that
+     bg-accent/15, ring-accent/50, bg-fill/10, … actually emit. Solid-only colors
+     (surface, separator, materials, text-*) stay as full values. */
+  --accent: 10 132 255;
   --accent-hover: #0070e0;
   --accent-fg: #ffffff;
 
@@ -16,10 +37,21 @@
   --text-primary: rgba(0, 0, 0, 0.92);
   --text-secondary: rgba(60, 60, 67, 0.6);
   --text-tertiary: rgba(60, 60, 67, 0.3);
+  /* Neutral grey for hover/tint fills (iOS systemFill style) — channels for /opacity. */
+  --fill: 60 60 67;
 
-  --success: #34c759;
-  --warning: #ff9f0a;
-  --danger: #ff3b30;
+  --success: 52 199 89;
+  --warning: 255 159 10;
+  --danger: 255 59 48;
+
+  /* Apple "materials": translucent tint + saturation + blur, layered by thickness. */
+  --material-ultrathin: rgba(255, 255, 255, 0.55);
+  --material-thin: rgba(255, 255, 255, 0.68);
+  --material-regular: rgba(246, 246, 248, 0.78);
+  --material-thick: rgba(246, 246, 248, 0.92);
+  --material-blur: saturate(180%) blur(30px);
+  --material-blur-thin: saturate(150%) blur(20px);
+  --material-highlight: rgba(255, 255, 255, 0.5);
 
   --radius-xs: 6px;
   --radius-sm: 10px;
@@ -28,12 +60,14 @@
   --radius-lg: 20px;
   --radius-2xl: 28px;
 
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.1);
-  --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.22);
+  /* Inset top hairline highlight (Apple's lit edge) baked into every elevation. */
+  --shadow-1: inset 0 0.5px 0 var(--material-highlight), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-2: inset 0 0.5px 0 var(--material-highlight), 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-3: inset 0 0.5px 0 var(--material-highlight), 0 24px 64px rgba(0, 0, 0, 0.22);
 
-  --blur-vibrancy: saturate(180%) blur(30px);
-  --blur-thin: blur(20px);
+  /* Legacy aliases — kept so existing [backdrop-filter:var(--blur-vibrancy)] keeps working. */
+  --blur-vibrancy: var(--material-blur);
+  --blur-thin: var(--material-blur-thin);
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -45,7 +79,7 @@
 }
 
 :root[data-theme="dark"] {
-  --accent: #0a84ff;
+  --accent: 10 132 255;
   --accent-hover: #3d9bff;
 
   --bg-base: #000000;
@@ -57,14 +91,21 @@
   --text-primary: rgba(255, 255, 255, 0.96);
   --text-secondary: rgba(235, 235, 245, 0.6);
   --text-tertiary: rgba(235, 235, 245, 0.3);
+  --fill: 235 235 245;
 
-  --success: #30d158;
-  --warning: #ffd60a;
-  --danger: #ff453a;
+  --success: 48 209 88;
+  --warning: 255 214 10;
+  --danger: 255 69 58;
 
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.55);
-  --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.7);
+  --material-ultrathin: rgba(28, 28, 30, 0.55);
+  --material-thin: rgba(28, 28, 30, 0.68);
+  --material-regular: rgba(28, 28, 30, 0.82);
+  --material-thick: rgba(20, 20, 22, 0.92);
+  --material-highlight: rgba(255, 255, 255, 0.08);
+
+  --shadow-1: inset 0 0.5px 0 var(--material-highlight), 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: inset 0 0.5px 0 var(--material-highlight), 0 4px 16px rgba(0, 0, 0, 0.55);
+  --shadow-3: inset 0 0.5px 0 var(--material-highlight), 0 24px 64px rgba(0, 0, 0, 0.7);
 
   color-scheme: dark;
 }
@@ -80,12 +121,18 @@
     --text-primary: rgba(255, 255, 255, 0.96);
     --text-secondary: rgba(235, 235, 245, 0.6);
     --text-tertiary: rgba(235, 235, 245, 0.3);
-    --success: #30d158;
-    --warning: #ffd60a;
-    --danger: #ff453a;
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.55);
-    --shadow-3: 0 24px 64px rgba(0, 0, 0, 0.7);
+    --fill: 235 235 245;
+    --success: 48 209 88;
+    --warning: 255 214 10;
+    --danger: 255 69 58;
+    --material-ultrathin: rgba(28, 28, 30, 0.55);
+    --material-thin: rgba(28, 28, 30, 0.68);
+    --material-regular: rgba(28, 28, 30, 0.82);
+    --material-thick: rgba(20, 20, 22, 0.92);
+    --material-highlight: rgba(255, 255, 255, 0.08);
+    --shadow-1: inset 0 0.5px 0 var(--material-highlight), 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-2: inset 0 0.5px 0 var(--material-highlight), 0 4px 16px rgba(0, 0, 0, 0.55);
+    --shadow-3: inset 0 0.5px 0 var(--material-highlight), 0 24px 64px rgba(0, 0, 0, 0.7);
     color-scheme: dark;
   }
 }
@@ -102,5 +149,19 @@ body {
   background: var(--bg-base);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  font-synthesis: none;
+}
+
+/* Respect the OS "reduce motion" setting — collapse all animation/transition. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

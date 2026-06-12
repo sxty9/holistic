@@ -42,8 +42,8 @@ class ServiceBoundary extends Component<{ children: ReactNode }, { error: boolea
 function Brand() {
   return (
     <div className="flex items-center gap-2">
-      <HolisticMark className="h-8 w-8 rounded-xl" />
-      <Text variant="subhead" weight="semibold">
+      <HolisticMark className="h-8 w-8" />
+      <Text variant="subhead" weight="semibold" className="tracking-[-0.01em]">
         Holistic
       </Text>
     </div>

@@ -14,8 +14,8 @@ export interface MenuItem {
 }
 
 const contentCls =
-  'z-50 min-w-[11rem] rounded-md border border-separator bg-surface-raised p-1 shadow-elev-3 ' +
-  'backdrop-blur-vibrancy focus:outline-none';
+  'z-50 min-w-[11rem] rounded-md border border-separator bg-material-thick [backdrop-filter:var(--material-blur)] p-1 shadow-elev-3 focus:outline-none ' +
+  'data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out';
 const itemCls =
   'flex items-center gap-2.5 rounded-sm px-2.5 h-8 text-footnote text-text-primary cursor-pointer select-none ' +
   'outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-fg data-[disabled]:opacity-40 data-[disabled]:pointer-events-none';
@@ -42,7 +42,7 @@ export function DropdownMenu({ trigger, items, align = 'end' }: { trigger: React
     <Dropdown.Root>
       <Dropdown.Trigger asChild>{trigger}</Dropdown.Trigger>
       <Dropdown.Portal>
-        <Dropdown.Content align={align} sideOffset={6} className={contentCls}>
+        <Dropdown.Content align={align} sideOffset={6} className={cn(contentCls, 'origin-[var(--radix-dropdown-menu-content-transform-origin)]')}>
           {renderItems(items, Dropdown.Item, Dropdown.Separator)}
         </Dropdown.Content>
       </Dropdown.Portal>
@@ -55,7 +55,7 @@ export function ContextMenu({ items, children }: { items: MenuItem[]; children: 
     <Context.Root>
       <Context.Trigger asChild>{children}</Context.Trigger>
       <Context.Portal>
-        <Context.Content className={contentCls}>{renderItems(items, Context.Item, Context.Separator)}</Context.Content>
+        <Context.Content className={cn(contentCls, 'origin-[var(--radix-context-menu-content-transform-origin)]')}>{renderItems(items, Context.Item, Context.Separator)}</Context.Content>
       </Context.Portal>
     </Context.Root>
   );

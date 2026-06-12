@@ -43,7 +43,7 @@ export interface AppShellProps {
 export function AppShell({ sidebar, topBar, children }: AppShellProps) {
   return (
     <div className="flex h-full w-full bg-bg-base text-text-primary">
-      <aside className="w-[248px] shrink-0 bg-surface-sidebar [backdrop-filter:var(--blur-vibrancy)] border-r border-separator flex flex-col">
+      <aside className="w-[248px] shrink-0 bg-material-regular [backdrop-filter:var(--material-blur)] border-r border-separator flex flex-col">
         {sidebar}
       </aside>
       <div className="flex flex-1 flex-col min-w-0">
@@ -81,8 +81,8 @@ export function Sidebar({ items, activeId, onSelect, header, footer }: SidebarPr
               onClick={() => onSelect(it.id)}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'flex items-center gap-3 rounded-md px-3 h-9 text-subhead transition-colors duration-fast text-left',
-                active ? 'bg-accent text-accent-fg font-medium shadow-elev-1' : 'text-text-secondary hover:bg-text-tertiary/10 hover:text-text-primary',
+                'flex items-center gap-3 rounded-md px-3 h-9 text-subhead transition-all duration-fast text-left active:scale-[0.98]',
+                active ? 'bg-accent text-accent-fg font-medium shadow-elev-1' : 'text-text-secondary hover:bg-fill/10 hover:text-text-primary',
               )}
             >
               <Icon className="h-5 w-5 shrink-0" />
@@ -111,7 +111,7 @@ export function TopBar({ title, actions, user, onSignOut, onChangePassword }: To
     { id: 'signout', label: 'Sign out', icon: <SignOutIcon />, danger: true, separatorBefore: true, onSelect: onSignOut },
   ];
   return (
-    <header className="h-14 shrink-0 flex items-center justify-between gap-4 px-5 border-b border-separator bg-surface [backdrop-filter:var(--blur-thin)]">
+    <header className="h-14 shrink-0 flex items-center justify-between gap-4 px-5 border-b border-separator bg-material-thin [backdrop-filter:var(--material-blur-thin)]">
       <div className="text-title3 font-semibold text-text-primary truncate">{title}</div>
       <div className="flex items-center gap-2">
         {actions}

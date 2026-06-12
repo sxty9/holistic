@@ -76,13 +76,15 @@ export function FilePreview({ open, entry, rawUrl, text, onOpenChange, onDownloa
   return (
     <Dialog.Root open={open && !!entry} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-thin" />
-        <Dialog.Content
-          className={cn(
-            'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2',
-            'rounded-lg bg-surface-raised border border-separator shadow-elev-3 overflow-hidden focus:outline-none',
-          )}
-        >
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 [backdrop-filter:var(--material-blur-thin)] data-[state=open]:animate-overlay-in data-[state=closed]:animate-overlay-out" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <Dialog.Content
+            className={cn(
+              'relative w-full max-w-4xl',
+              'rounded-lg bg-surface-raised border border-separator shadow-elev-3 overflow-hidden focus:outline-none',
+              'data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out',
+            )}
+          >
           <div className="flex items-center justify-between gap-4 px-4 h-12 border-b border-separator">
             <Dialog.Title className="text-subhead font-semibold text-text-primary truncate">{entry?.name}</Dialog.Title>
             <div className="flex items-center gap-1">
@@ -99,7 +101,8 @@ export function FilePreview({ open, entry, rawUrl, text, onOpenChange, onDownloa
             </div>
           </div>
           {entry && <Body entry={entry} rawUrl={rawUrl} text={text} onDownload={onDownload} />}
-        </Dialog.Content>
+          </Dialog.Content>
+        </div>
       </Dialog.Portal>
     </Dialog.Root>
   );

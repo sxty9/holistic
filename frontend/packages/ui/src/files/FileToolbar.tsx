@@ -25,7 +25,7 @@ export function FileToolbar({ view, onViewChange, search, onSearch, selection, c
   const onlyFiles = hasSel && selection.every((s) => s.kind === 'file');
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <IconButton
           label="Parent folder"
           variant="secondary"
@@ -35,8 +35,17 @@ export function FileToolbar({ view, onViewChange, search, onSearch, selection, c
         >
           <ArrowUpIcon className="h-4 w-4" />
         </IconButton>
-        {hasSel ? (
+        {canWrite && (
           <>
+            <Button variant="secondary" size="sm" iconLeft={<FolderPlusIcon className="h-4 w-4" />} onClick={onNewFolder}>
+              New Folder
+            </Button>
+            <UploadControl onFiles={onUpload} />
+          </>
+        )}
+        {hasSel && (
+          <>
+            {canWrite && <span aria-hidden className="mx-1 h-5 w-px bg-separator" />}
             <Text variant="footnote" color="secondary">
               {selection.length} selected
             </Text>
@@ -60,15 +69,6 @@ export function FileToolbar({ view, onViewChange, search, onSearch, selection, c
               Delete
             </Button>
           </>
-        ) : (
-          canWrite && (
-            <>
-              <Button variant="secondary" size="sm" iconLeft={<FolderPlusIcon className="h-4 w-4" />} onClick={onNewFolder}>
-                New Folder
-              </Button>
-              <UploadControl onFiles={onUpload} />
-            </>
-          )
         )}
       </div>
       <div className="flex items-center gap-2">
@@ -77,8 +77,8 @@ export function FileToolbar({ view, onViewChange, search, onSearch, selection, c
           value={view}
           onChange={onViewChange}
           options={[
-            { value: 'grid', icon: <GridIcon className="h-4 w-4" /> },
-            { value: 'list', icon: <ListIcon className="h-4 w-4" /> },
+            { value: 'grid', icon: <GridIcon className="h-4 w-4" />, 'aria-label': 'Grid view' },
+            { value: 'list', icon: <ListIcon className="h-4 w-4" />, 'aria-label': 'List view' },
           ]}
         />
       </div>

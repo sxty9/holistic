@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { Grid, Spinner, EmptyState } from '../primitives';
 import { ContextMenu, type MenuItem } from '../overlay/menu';
@@ -33,9 +33,35 @@ export function formatDate(ms: number): string {
   return new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+const COL_MIN = 72;
+const COL_MAX = 360;
+const NAME_MIN = 160; // space always reserved for the Name column when resizing
+const LIST_CHROME = 8 + 24 + 16; // wrapper px-1 + row px-3 + two gap-2 gutters
+// Header and rows share one template so the columns stay aligned; the widths live in
+// custom properties on the list wrapper so a drag never re-renders the rows.
+const LIST_TEMPLATE: CSSProperties = { gridTemplateColumns: 'minmax(96px, 1fr) var(--fb-col-size, 112px) var(--fb-col-mod, 128px)' };
+
+/** Drag handle on a list-header column's left edge (pointer-only affordance). */
+function ColumnResizeHandle({ onPointerDown }: { onPointerDown: (e: ReactPointerEvent<HTMLSpanElement>) => void }) {
+  return (
+    <span
+      aria-hidden
+      onPointerDown={onPointerDown}
+      onClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+      className="group absolute -inset-y-1.5 -left-1.5 flex w-3 cursor-col-resize touch-none justify-center"
+    >
+      <span className="h-full w-px bg-separator transition-colors group-hover:bg-accent" />
+    </span>
+  );
+}
+
 export function FileBrowser({ entries, view, selection, loading, error, cutPaths, onOpen, onSelectionChange, onAction, emptyAction }: FileBrowserProps) {
   // Index of the last clicked item — the anchor for shift-range selection.
   const anchor = useRef<number | null>(null);
+  // List-view column widths (px); Name takes the remaining space. Committed once per drag.
+  const [colWidths, setColWidths] = useState({ size: 112, modified: 128 });
+  const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     anchor.current = null;
   }, [entries]);
@@ -71,6 +97,37 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
     if (!selection.has(entry.path)) onSelectionChange(new Set([entry.path]));
   }
 
+  function beginColumnResize(e: ReactPointerEvent<HTMLSpanElement>, col: 'size' | 'modified') {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const id = e.pointerId;
+    const startX = e.clientX;
+    const startWidth = colWidths[col];
+    const other = col === 'size' ? colWidths.modified : colWidths.size;
+    const container = listRef.current?.clientWidth;
+    const max = container ? Math.max(COL_MIN, Math.min(COL_MAX, container - LIST_CHROME - other - NAME_MIN)) : COL_MAX;
+    let width = startWidth;
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId !== id) return;
+      // The handle sits on the column's left edge — dragging left widens it.
+      width = Math.min(max, Math.max(COL_MIN, startWidth - (ev.clientX - startX)));
+      listRef.current?.style.setProperty(col === 'size' ? '--fb-col-size' : '--fb-col-mod', `${width}px`);
+    };
+    const stop = (ev: PointerEvent) => {
+      if (ev.pointerId !== id) return;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+      document.body.style.cursor = '';
+      setColWidths((w) => ({ ...w, [col]: width }));
+    };
+    document.body.style.cursor = 'col-resize';
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
+  }
+
   function contextItems(entry: FileEntry): MenuItem[] {
     const targets = targetFor(entry);
     const single = targets.length === 1;
@@ -101,7 +158,7 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
 
   if (view === 'grid') {
     return (
-      <Grid minItemWidth={132} gap={3} className="p-1 min-h-[240px]" onClick={clearSelection}>
+      <Grid minItemWidth={132} gap={3} className="p-1 min-h-[240px] content-start" onClick={clearSelection}>
         {entries.map((entry, i) => (
           <ContextMenu key={entry.path} items={contextItems(entry)}>
             <button
@@ -110,8 +167,8 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
               onDoubleClick={() => onOpen(entry)}
               onContextMenu={() => ensureSelected(entry)}
               className={cn(
-                'group flex flex-col items-center gap-2 rounded-md p-3 text-center transition-colors',
-                selection.has(entry.path) ? 'bg-accent/15 ring-1 ring-accent/40' : 'hover:bg-text-tertiary/10',
+                'group flex aspect-square flex-col items-center justify-center gap-2 rounded-md p-3 text-center transition-colors',
+                selection.has(entry.path) ? 'bg-accent/15 ring-1 ring-accent/40' : 'hover:bg-fill/10',
                 cutPaths?.has(entry.path) && 'opacity-40',
               )}
             >
@@ -125,11 +182,22 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
   }
 
   return (
-    <div className="px-1 min-h-[240px]" onClick={clearSelection}>
-      <div className="grid grid-cols-[1fr_7rem_8rem] gap-2 px-3 py-1.5 text-caption font-medium text-text-tertiary border-b border-separator">
-        <span>Name</span>
-        <span className="text-right">Size</span>
-        <span className="text-right">Modified</span>
+    <div
+      ref={listRef}
+      className="px-1 min-h-[240px]"
+      style={{ '--fb-col-size': `${colWidths.size}px`, '--fb-col-mod': `${colWidths.modified}px` } as CSSProperties}
+      onClick={clearSelection}
+    >
+      <div className="grid gap-2 px-3 py-1.5 text-caption font-medium text-text-tertiary border-b border-separator" style={LIST_TEMPLATE}>
+        <span className="truncate">Name</span>
+        <span className="relative text-right">
+          Size
+          <ColumnResizeHandle onPointerDown={(e) => beginColumnResize(e, 'size')} />
+        </span>
+        <span className="relative text-right">
+          Modified
+          <ColumnResizeHandle onPointerDown={(e) => beginColumnResize(e, 'modified')} />
+        </span>
       </div>
       {entries.map((entry, i) => (
         <ContextMenu key={entry.path} items={contextItems(entry)}>
@@ -139,10 +207,11 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
             onDoubleClick={() => onOpen(entry)}
             onContextMenu={() => ensureSelected(entry)}
             className={cn(
-              'grid w-full grid-cols-[1fr_7rem_8rem] items-center gap-2 rounded-md px-3 h-11 text-left transition-colors',
-              selection.has(entry.path) ? 'bg-accent/15' : 'hover:bg-text-tertiary/10',
+              'grid w-full items-center gap-2 rounded-md px-3 h-11 text-left transition-colors',
+              selection.has(entry.path) ? 'bg-accent/15' : 'hover:bg-fill/10',
               cutPaths?.has(entry.path) && 'opacity-40',
             )}
+            style={LIST_TEMPLATE}
           >
             <span className="flex items-center gap-2.5 min-w-0">
               <FileEntryIcon entry={entry} className="h-5 w-5 shrink-0" />

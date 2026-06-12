@@ -33,6 +33,7 @@ export {
   SegmentedControl,
   SearchField,
   Checkbox,
+  Switch,
   InlineLink,
 } from './controls';
 export type { ButtonProps, IconButtonProps, InputProps, FieldProps, SegmentedOption } from './controls';

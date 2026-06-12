@@ -54,11 +54,21 @@ export interface PanelProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'
   title?: ReactNode;
   actions?: ReactNode;
   elevation?: 1 | 2 | 3;
+  /** Lift on hover — for clickable cards. Off by default so static panels don't move. */
+  interactive?: boolean;
 }
 const ELEV = { 1: 'shadow-elev-1', 2: 'shadow-elev-2', 3: 'shadow-elev-3' } as const;
-export function Panel({ title, actions, elevation = 1, className, children, ...rest }: PanelProps) {
+export function Panel({ title, actions, elevation = 1, interactive, className, children, ...rest }: PanelProps) {
   return (
-    <div className={cn('rounded-card bg-surface-raised border border-separator', ELEV[elevation], className)} {...rest}>
+    <div
+      className={cn(
+        'rounded-card bg-surface-raised border border-separator',
+        ELEV[elevation],
+        interactive && 'transition-all duration-base ease-out hover:-translate-y-0.5 hover:shadow-elev-2',
+        className,
+      )}
+      {...rest}
+    >
       {(title || actions) && (
         <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-separator">
           {title && <div className="text-subhead font-semibold text-text-primary">{title}</div>}
@@ -125,7 +135,7 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 const BADGE = {
-  neutral: 'bg-text-tertiary/20 text-text-secondary',
+  neutral: 'bg-fill/20 text-text-secondary',
   accent: 'bg-accent/15 text-accent',
   success: 'bg-success/15 text-success',
   danger: 'bg-danger/15 text-danger',
@@ -136,7 +146,7 @@ export function Badge({ variant = 'neutral', className, children }: { variant?: 
 
 export function ProgressBar({ value, indeterminate, className }: { value?: number; indeterminate?: boolean; className?: string }) {
   return (
-    <div className={cn('h-1.5 w-full overflow-hidden rounded-full bg-text-tertiary/20', className)}>
+    <div className={cn('h-1.5 w-full overflow-hidden rounded-full bg-fill/20', className)}>
       <div
         className={cn('h-full rounded-full bg-accent transition-[width] duration-base ease-out', indeterminate && 'w-1/3 animate-pulse')}
         style={indeterminate ? undefined : { width: `${Math.max(0, Math.min(100, value ?? 0))}%` }}

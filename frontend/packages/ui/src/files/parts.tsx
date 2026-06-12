@@ -26,7 +26,7 @@ export function Breadcrumb({ segments, onNavigate }: { segments: BreadcrumbSegme
             type="button"
             onClick={() => onNavigate(s.path)}
             className={cn(
-              'truncate rounded px-1.5 py-0.5 text-subhead transition-colors hover:bg-text-tertiary/10',
+              'truncate rounded px-1.5 py-0.5 text-subhead transition-colors hover:bg-fill/10',
               i === segments.length - 1 ? 'text-text-primary font-semibold' : 'text-text-secondary',
             )}
           >

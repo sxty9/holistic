@@ -4,10 +4,11 @@ import { Spinner } from './primitives';
 import { EyeIcon, EyeOffIcon, SearchIcon } from './icons';
 
 const BTN_VARIANT = {
-  primary: 'bg-accent text-accent-fg hover:bg-accent-hover shadow-elev-1',
-  secondary: 'bg-surface-raised text-text-primary border border-separator hover:bg-text-tertiary/10',
-  ghost: 'text-text-primary hover:bg-text-tertiary/10',
-  destructive: 'bg-danger text-white hover:opacity-90 shadow-elev-1',
+  primary: 'bg-accent text-accent-fg hover:bg-accent-hover active:bg-accent-hover shadow-elev-1',
+  secondary: 'bg-surface-raised text-text-primary border border-separator hover:bg-fill/10 active:bg-fill/15',
+  tinted: 'bg-accent/10 text-accent hover:bg-accent/20 active:bg-accent/25',
+  ghost: 'text-text-primary hover:bg-fill/10 active:bg-fill/15',
+  destructive: 'bg-danger text-white hover:opacity-90 active:opacity-100 shadow-elev-1',
 } as const;
 const BTN_SIZE = {
   sm: 'h-8 px-3 text-footnote rounded-sm gap-1.5',
@@ -32,8 +33,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center font-medium transition-colors duration-fast ease-out select-none',
-        'disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50',
+        'inline-flex items-center justify-center font-medium transition-all duration-fast ease-out select-none',
+        'active:scale-[0.97] active:duration-[80ms]',
+        'disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50',
         BTN_VARIANT[variant],
         BTN_SIZE[size],
         className,
@@ -64,8 +66,9 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       aria-label={label}
       title={label}
       className={cn(
-        'inline-flex items-center justify-center rounded-md transition-colors duration-fast ease-out',
-        'disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50',
+        'inline-flex items-center justify-center rounded-md transition-all duration-fast ease-out',
+        'active:scale-[0.94] active:duration-[80ms]',
+        'disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50',
         BTN_VARIANT[variant],
         size === 'sm' ? 'h-8 w-8' : 'h-10 w-10',
         className,
@@ -79,7 +82,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
 
 const inputBase =
   'w-full rounded-md bg-surface-raised border border-separator px-3 text-subhead text-text-primary placeholder:text-text-tertiary ' +
-  'transition-shadow duration-fast focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent';
+  'shadow-[inset_0_1px_1px_rgba(0,0,0,0.03)] transition-[box-shadow,border-color] duration-fast focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean;
@@ -135,19 +138,31 @@ export interface SegmentedOption<T extends string> {
   value: T;
   label?: ReactNode;
   icon?: ReactNode;
+  /** Accessible name — required for icon-only segments (no visible text label). */
+  'aria-label'?: string;
 }
 export function SegmentedControl<T extends string>({ options, value, onChange, className }: { options: SegmentedOption<T>[]; value: T; onChange: (v: T) => void; className?: string }) {
+  const index = Math.max(0, options.findIndex((o) => o.value === value));
+  const n = options.length;
   return (
-    <div className={cn('inline-flex items-center gap-0.5 rounded-md bg-text-tertiary/15 p-0.5', className)}>
+    <div className={cn('relative inline-grid auto-cols-fr grid-flow-col items-center rounded-md bg-fill/15 p-0.5', className)}>
+      {/* The selected pill slides between equal-width segments (iOS segmented control). */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0.5 left-0.5 rounded-sm bg-surface-raised shadow-elev-1 transition-transform duration-base ease-spring"
+        style={{ width: `calc((100% - 4px) / ${n})`, transform: `translateX(${index * 100}%)` }}
+      />
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           aria-pressed={value === o.value}
+          aria-label={o['aria-label']}
+          title={o['aria-label']}
           onClick={() => onChange(o.value)}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-sm px-2.5 h-7 text-footnote font-medium transition-colors duration-fast',
-            value === o.value ? 'bg-surface-raised text-text-primary shadow-elev-1' : 'text-text-secondary hover:text-text-primary',
+            'relative z-10 inline-flex h-7 items-center justify-center gap-1.5 px-2.5 text-footnote font-medium transition-colors duration-fast',
+            value === o.value ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary',
           )}
         >
           {o.icon}
@@ -175,16 +190,42 @@ export function SearchField({ value, onChange, placeholder = 'Search', className
 export function Checkbox({ checked, onChange, className, label }: { checked: boolean; onChange: (v: boolean) => void; className?: string; label?: ReactNode }) {
   return (
     <label className={cn('inline-flex items-center gap-2 cursor-pointer select-none', className)}>
+      <input type="checkbox" className="peer sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span
-        className={cn('flex h-5 w-5 items-center justify-center rounded border transition-colors', checked ? 'bg-accent border-accent text-accent-fg' : 'border-separator bg-surface-raised')}
+        className={cn(
+          'flex h-5 w-5 items-center justify-center rounded-[5px] border transition-colors duration-fast',
+          'peer-focus-visible:ring-2 peer-focus-visible:ring-accent/50',
+          checked ? 'bg-accent border-accent text-accent-fg' : 'border-separator bg-surface-raised',
+        )}
       >
         {checked && (
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 animate-pop-in" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
             <path d="m5 12 5 5 9-11" />
           </svg>
         )}
       </span>
-      <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      {label && <span className="text-subhead text-text-primary">{label}</span>}
+    </label>
+  );
+}
+
+export function Switch({ checked, onChange, disabled, label, className }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; label?: ReactNode; className?: string }) {
+  return (
+    <label className={cn('inline-flex items-center gap-2.5 select-none', disabled ? 'opacity-50 pointer-events-none' : 'cursor-pointer', className)}>
+      <input type="checkbox" role="switch" className="peer sr-only" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <span
+        className={cn(
+          'relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-base ease-out',
+          'peer-focus-visible:ring-2 peer-focus-visible:ring-accent/50',
+          checked ? 'bg-success' : 'bg-fill/40',
+        )}
+      >
+        {/* 51×31 track, 27px knob, 20px travel — the exact iOS toggle geometry. */}
+        <span
+          className="absolute top-0.5 left-0.5 h-[27px] w-[27px] rounded-full bg-white shadow-elev-1 transition-transform duration-base ease-spring"
+          style={{ transform: checked ? 'translateX(20px)' : 'translateX(0)' }}
+        />
+      </span>
       {label && <span className="text-subhead text-text-primary">{label}</span>}
     </label>
   );
