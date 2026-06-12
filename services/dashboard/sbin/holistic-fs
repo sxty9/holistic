@@ -68,9 +68,13 @@ def validate(path: str) -> str:
     return real
 
 
-def validate_new(parent: str, name: str) -> str:
-    """Validate a to-be-created child `name` under existing dir `parent`."""
-    if name in ("", ".", "..") or not SAFE_NAME.match(name) or name.startswith("."):
+def validate_new(parent: str, name: str, allow_dot: bool = False) -> str:
+    """Validate a to-be-created child `name` under existing dir `parent`.
+
+    `allow_dot` permits a leading dot — used by move/copy where the name comes from an
+    existing entry. New names typed in the UI (mkdir/upload/rename) keep dotfiles blocked.
+    """
+    if name in ("", ".", "..") or not SAFE_NAME.match(name) or (not allow_dot and name.startswith(".")):
         fail(2, "invalid name")
     base = validate(parent)
     if not os.path.isdir(base):
@@ -143,6 +147,8 @@ def cmd_list(a):
     entries = []
     with os.scandir(real) as it:
         for de in it:
+            if not a.all and de.name.startswith("."):
+                continue  # hide dotfiles/dirs by default
             try:
                 entries.append(entry_for(de.path, de.name))
             except OSError:
@@ -220,7 +226,7 @@ def cmd_move(a):
     dstdir = validate(a.dstdir)
     if not os.path.isdir(dstdir):
         fail(4, "destination is not a directory")
-    target = validate_new(dstdir, os.path.basename(src.rstrip("/")))
+    target = validate_new(dstdir, os.path.basename(src.rstrip("/")), allow_dot=True)
     if os.path.exists(target):
         fail(5, "target exists")
     shutil.move(src, target)
@@ -232,7 +238,7 @@ def cmd_copy(a):
     if not os.path.exists(src):
         fail(4, "not found")
     dstdir = validate(a.dstdir)
-    target = validate_new(dstdir, os.path.basename(src.rstrip("/")))
+    target = validate_new(dstdir, os.path.basename(src.rstrip("/")), allow_dot=True)
     if os.path.exists(target):
         fail(5, "target exists")
     if os.path.isdir(src):
@@ -259,10 +265,13 @@ def cmd_delete(a):
 def main() -> int:
     p = argparse.ArgumentParser(prog="holistic-fs")
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name in ("stat", "list"):
-        sp = sub.add_parser(name)
-        sp.add_argument("path")
-        sp.set_defaults(fn=globals()[f"cmd_{name}"])
+    sp = sub.add_parser("stat")
+    sp.add_argument("path")
+    sp.set_defaults(fn=cmd_stat)
+    sl = sub.add_parser("list")
+    sl.add_argument("path")
+    sl.add_argument("--all", action="store_true", help="include dotfiles")
+    sl.set_defaults(fn=cmd_list)
     sr = sub.add_parser("read")
     sr.add_argument("path")
     sr.add_argument("--offset", type=int, default=0)

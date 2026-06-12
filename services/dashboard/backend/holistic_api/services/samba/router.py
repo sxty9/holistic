@@ -173,6 +173,16 @@ def fs_move(body: MoveBody, user: dict = Depends(current_user)):
         raise _fs_http(e)
 
 
+@router.post("/fs/copy", dependencies=[Depends(csrf_guard)])
+def fs_copy(body: MoveBody, user: dict = Depends(current_user)):
+    src = _abspath(user["username"], body.src)
+    dstdir = _abspath(user["username"], body.dstDir)
+    try:
+        return fsclient.run_json(user["username"], "copy", src, dstdir)
+    except fsclient.FsError as e:
+        raise _fs_http(e)
+
+
 @router.post("/fs/delete", dependencies=[Depends(csrf_guard)])
 def fs_delete(body: DeleteBody, user: dict = Depends(current_user)):
     abspath = _abspath(user["username"], body.path)

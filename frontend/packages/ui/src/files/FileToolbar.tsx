@@ -1,5 +1,5 @@
 import { Button, SearchField, SegmentedControl } from '../controls';
-import { DownloadIcon, FolderPlusIcon, GridIcon, ListIcon, MoveIcon, PencilIcon, TrashIcon } from '../icons';
+import { CopyIcon, DownloadIcon, FolderPlusIcon, GridIcon, ListIcon, MoveIcon, PencilIcon, TrashIcon } from '../icons';
 import { Text } from '../primitives';
 import type { FileEntry } from '../plugin/contract';
 import { UploadControl } from './parts';
@@ -38,6 +38,9 @@ export function FileToolbar({ view, onViewChange, search, onSearch, selection, c
                 Rename
               </Button>
             )}
+            <Button variant="secondary" size="sm" iconLeft={<CopyIcon className="h-4 w-4" />} onClick={() => onAction('copy', selection)}>
+              Copy
+            </Button>
             <Button variant="secondary" size="sm" iconLeft={<MoveIcon className="h-4 w-4" />} onClick={() => onAction('move', selection)}>
               Move
             </Button>

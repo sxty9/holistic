@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Breadcrumb,
+  Button,
   ContentRegion,
+  CopyIcon,
   FileBrowser,
   FilePreview,
   FileToolbar,
-  MoveDialog,
+  MoveIcon,
   NewFolderDialog,
   Panel,
   RenameDialog,
   SegmentedControl,
   Stack,
+  Text,
   UploadControl,
   formatBytes,
   formatDate,
@@ -22,6 +25,11 @@ import {
   type TextPayload,
 } from '@holistic/ui';
 import { ConnectPanel } from './ConnectPanel';
+
+interface Clipboard {
+  mode: 'move' | 'copy';
+  items: FileEntry[];
+}
 
 function buildBreadcrumb(cwd: string, roots: FileRoot[]): BreadcrumbSegment[] {
   const [rootKey, ...rest] = cwd.split('/');
@@ -37,6 +45,7 @@ function buildBreadcrumb(cwd: string, roots: FileRoot[]): BreadcrumbSegment[] {
 }
 
 const q = (path: string) => encodeURIComponent(path);
+const parentOf = (path: string) => path.split('/').slice(0, -1).join('/');
 
 export function FileManager({ user, api, ui }: ServiceContextProps) {
   const [tab, setTab] = useState<'files' | 'connect'>('files');
@@ -50,8 +59,8 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<{ entry: FileEntry; rawUrl?: string; text?: TextPayload | null } | null>(null);
   const [renaming, setRenaming] = useState<FileEntry | null>(null);
-  const [moving, setMoving] = useState<FileEntry[] | null>(null);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [clipboard, setClipboard] = useState<Clipboard | null>(null);
 
   useEffect(() => {
     api
@@ -80,6 +89,12 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
   const canWrite = currentRoot?.writable ?? true;
   const filtered = search ? entries.filter((e) => e.name.toLowerCase().includes(search.toLowerCase())) : entries;
   const selectedEntries = entries.filter((e) => selection.has(e.path));
+  const cutPaths = clipboard?.mode === 'move' ? new Set(clipboard.items.map((i) => i.path)) : undefined;
+
+  function navigate(path: string) {
+    setSearch('');
+    setCwd(path);
+  }
 
   function download(items: FileEntry[]) {
     for (const it of items) {
@@ -94,8 +109,7 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
 
   async function openEntry(entry: FileEntry) {
     if (entry.kind === 'dir') {
-      setSearch('');
-      setCwd(entry.path);
+      navigate(entry.path);
       return;
     }
     if (entry.viewer === 'text' || entry.viewer === 'markdown') {
@@ -128,11 +142,34 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
   function handleAction(action: FileActionId, targets: FileEntry[]) {
     if (action === 'download') download(targets.filter((t) => t.kind === 'file'));
     else if (action === 'rename') setRenaming(targets[0]);
-    else if (action === 'move') setMoving(targets);
-    else if (action === 'delete') void confirmDelete(targets);
+    else if (action === 'move') {
+      setClipboard({ mode: 'move', items: targets });
+      setSelection(new Set());
+    } else if (action === 'copy') {
+      setClipboard({ mode: 'copy', items: targets });
+      setSelection(new Set());
+    } else if (action === 'delete') void confirmDelete(targets);
     else if (action === 'info') {
       const t = targets[0];
       ui.toast({ title: t.name, description: `${t.kind === 'dir' ? 'Folder' : formatBytes(t.size)} · ${formatDate(t.mtime)}` });
+    }
+  }
+
+  async function paste() {
+    if (!clipboard) return;
+    const op = clipboard.mode === 'move' ? 'fs/move' : 'fs/copy';
+    let done = 0;
+    try {
+      for (const it of clipboard.items) {
+        if (clipboard.mode === 'move' && parentOf(it.path) === cwd) continue; // already here
+        await api.post(op, { src: it.path, dstDir: cwd });
+        done += 1;
+      }
+      ui.toast({ title: clipboard.mode === 'move' ? 'Moved' : 'Copied', description: `${done || clipboard.items.length} item${(done || clipboard.items.length) > 1 ? 's' : ''}`, variant: 'success' });
+      setClipboard(null);
+      reload();
+    } catch (e) {
+      ui.toast({ title: clipboard.mode === 'move' ? 'Move failed' : 'Copy failed', description: (e as Error).message, variant: 'error' });
     }
   }
 
@@ -144,17 +181,6 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
       reload();
     } catch (e) {
       ui.toast({ title: 'Rename failed', description: (e as Error).message, variant: 'error' });
-    }
-  }
-
-  async function doMove(dstDir: string) {
-    if (!moving) return;
-    try {
-      for (const m of moving) await api.post('fs/move', { src: m.path, dstDir });
-      ui.toast({ title: 'Moved', variant: 'success' });
-      reload();
-    } catch (e) {
-      ui.toast({ title: 'Move failed', description: (e as Error).message, variant: 'error' });
     }
   }
 
@@ -184,6 +210,12 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
     }
   }
 
+  const clipboardSummary = clipboard
+    ? clipboard.items.length === 1
+      ? clipboard.items[0].name
+      : `${clipboard.items.length} items`
+    : '';
+
   return (
     <ContentRegion>
       <Stack gap={4}>
@@ -198,13 +230,7 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
 
         {tab === 'files' ? (
           <Stack gap={3}>
-            <Breadcrumb
-              segments={buildBreadcrumb(cwd, roots)}
-              onNavigate={(p) => {
-                setSearch('');
-                setCwd(p);
-              }}
-            />
+            <Breadcrumb segments={buildBreadcrumb(cwd, roots)} onNavigate={navigate} />
             <FileToolbar
               view={view}
               onViewChange={setView}
@@ -216,6 +242,34 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
               onUpload={doUpload}
               onAction={handleAction}
             />
+
+            {clipboard && (
+              <Stack
+                direction="row"
+                align="center"
+                justify="between"
+                gap={3}
+                className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2"
+              >
+                <Text variant="footnote" color="secondary">
+                  {clipboard.mode === 'move' ? 'Moving' : 'Copying'} <Text as="span" weight="semibold" color="primary">{clipboardSummary}</Text> — go to a folder, then paste.
+                </Text>
+                <Stack direction="row" gap={2}>
+                  <Button variant="ghost" size="sm" onClick={() => setClipboard(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    iconLeft={clipboard.mode === 'move' ? <MoveIcon className="h-4 w-4" /> : <CopyIcon className="h-4 w-4" />}
+                    onClick={paste}
+                  >
+                    {clipboard.mode === 'move' ? 'Move here' : 'Copy here'}
+                  </Button>
+                </Stack>
+              </Stack>
+            )}
+
             <Panel>
               <FileBrowser
                 entries={filtered}
@@ -223,6 +277,7 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
                 selection={selection}
                 loading={loading}
                 error={error}
+                cutPaths={cutPaths}
                 onOpen={openEntry}
                 onSelectionChange={setSelection}
                 onAction={handleAction}
@@ -245,7 +300,6 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
       />
       <NewFolderDialog open={newFolderOpen} onOpenChange={setNewFolderOpen} onSubmit={doMkdir} />
       <RenameDialog open={!!renaming} initialName={renaming?.name ?? ''} onOpenChange={(o) => !o && setRenaming(null)} onSubmit={doRename} />
-      <MoveDialog open={!!moving} roots={roots} initialDir={cwd} onOpenChange={(o) => !o && setMoving(null)} onSubmit={doMove} />
     </ContentRegion>
   );
 }
