@@ -25,9 +25,12 @@ if ! command -v caddy >/dev/null; then
 fi
 apt-get install -y -qq python3-venv caddy openssl >/dev/null
 
-# Node 20 + pnpm for the frontend build.
-if ! command -v node >/dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1 || true
+# Node 22+ for the frontend build (the pnpm/corepack toolchain uses node:sqlite, added in
+# Node 22.5). Install/upgrade via NodeSource if node is missing OR too old — note an existing
+# old node must NOT be left in place, so we check the major version, not just presence.
+NODE_MAJOR="$(node -v 2>/dev/null | sed -n 's/^v\([0-9][0-9]*\).*/\1/p')"
+if [ -z "$NODE_MAJOR" ] || [ "$NODE_MAJOR" -lt 22 ]; then
+    curl -fsSL https://deb.nodesource.com/setup_24.x | bash - >/dev/null 2>&1 || true
     apt-get install -y -qq nodejs >/dev/null
 fi
 corepack enable >/dev/null 2>&1 || npm install -g pnpm >/dev/null 2>&1
