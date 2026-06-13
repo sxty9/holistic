@@ -17,6 +17,7 @@ holistic — Holistic Homeserver orchestrator
 Usage:
   holistic setup                    System prep + install all services
   holistic setup <service>          Install/repair a single service (no system prep)
+  holistic start|stop|restart [target]   Control services (target: dashboard|caddy|samba|all; default all)
   holistic user add <name> [label]  Create a NEW user (Linux + Samba, both passwords)
   holistic user adopt <name>        Onboard an EXISTING Linux user (groups + drive + one unified password)
   holistic user unadopt <name>      Remove an adopted user from holistic (keeps Linux account, home + drive)
@@ -27,7 +28,7 @@ Usage:
   holistic invite revoke <id>       Revoke an invite
   holistic update                   Pull latest repo + re-run setup
   holistic list                     List services in install order
-  holistic status                   Show service install state
+  holistic status                   Show whether each service is running
   holistic help                     Show this help
 EOF
 }
@@ -256,15 +257,48 @@ cmd_list() {
     read_manifest
 }
 
-cmd_status() {
-    local svc
-    while read -r svc; do
-        if [[ -f "$SERVICES_DIR/$svc/install.sh" ]]; then
-            echo "  $svc: installed"
+# --- service lifecycle (systemd) ---
+
+# The systemd units holistic manages. (cloudflared belongs to sxgate, not holistic.)
+HOLISTIC_UNITS="holistic-dashboard caddy smbd nmbd"
+
+# Map a friendly target to its unit(s); no target / "all" => the whole stack.
+holistic_units_for() {
+    case "${1:-all}" in
+        all)             echo "$HOLISTIC_UNITS" ;;
+        dashboard|web)   echo "holistic-dashboard" ;;
+        caddy|proxy)     echo "caddy" ;;
+        samba|smb)       echo "smbd nmbd" ;;
+        holistic-dashboard|caddy|smbd|nmbd) echo "$1" ;;
+        *) echo "[holistic] ERROR: unknown target '$1' (use: dashboard|caddy|samba|all)" >&2; return 1 ;;
+    esac
+}
+
+cmd_lifecycle() {
+    require_root
+    local action="$1" target="${2:-all}" units u rc=0
+    units="$(holistic_units_for "$target")" || exit 1
+    for u in $units; do
+        if systemctl "$action" "$u"; then
+            echo "[holistic] $action: $u"
         else
-            echo "  $svc: MISSING"
+            echo "[holistic] WARN: '$action $u' failed — installed? run 'sudo ./holistic setup'" >&2
+            rc=1
         fi
-    done < <(read_manifest)
+    done
+    return "$rc"
+}
+
+cmd_status() {
+    local u state
+    for u in $HOLISTIC_UNITS; do
+        state="$(systemctl is-active "$u" 2>/dev/null || true)"
+        printf '  %-20s %s\n' "$u" "${state:-unknown}"
+    done
+    if systemctl cat cloudflared >/dev/null 2>&1; then
+        state="$(systemctl is-active cloudflared 2>/dev/null || true)"
+        printf '  %-20s %s\n' "cloudflared" "${state:-unknown} (sxgate tunnel)"
+    fi
 }
 
 # --- main ---
@@ -273,6 +307,9 @@ main() {
     local cmd="${1:-help}"
     case "$cmd" in
         setup)          shift; cmd_setup "$@" ;;
+        start)          shift; cmd_lifecycle start "$@" ;;
+        stop)           shift; cmd_lifecycle stop "$@" ;;
+        restart)        shift; cmd_lifecycle restart "$@" ;;
         user)
             shift
             case "${1:-}" in
