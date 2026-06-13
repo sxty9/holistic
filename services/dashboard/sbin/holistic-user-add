@@ -19,5 +19,4 @@ IFS= read -r pw || true
 holistic_user_exists "$name" && { echo "holistic-user-add: user exists" >&2; exit 3; }
 
 holistic_user_create_account "$name" "$gecos"
-holistic_set_linux_password "$name" "$pw"
-holistic_set_smb_password_new "$name" "$pw"
+holistic_set_password "$name" "$pw"

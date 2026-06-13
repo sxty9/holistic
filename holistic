@@ -17,7 +17,9 @@ holistic — Holistic Homeserver orchestrator
 Usage:
   holistic setup                    System prep + install all services
   holistic setup <service>          Install/repair a single service (no system prep)
-  holistic user add <name> [label]  Create a user (Linux + Samba, both passwords)
+  holistic user add <name> [label]  Create a NEW user (Linux + Samba, both passwords)
+  holistic user adopt <name>        Onboard an EXISTING Linux user (groups + drive + one unified password)
+  holistic user unadopt <name>      Remove an adopted user from holistic (keeps Linux account, home + drive)
   holistic user passwd <name>       Change a user's password (Linux + Samba)
   holistic user delete <name> [--purge]   Remove a user (--purge deletes their files)
   holistic invite new [--note X] [--expires-days N]   Mint a registration invite code
@@ -178,10 +180,35 @@ cmd_user_add() {
     read_password_twice "Password for $name: " || exit 1
 
     holistic_user_create_account "$name" "$gecos"
-    holistic_set_linux_password "$name" "$REPLY_PW"
-    holistic_set_smb_password_new "$name" "$REPLY_PW"
+    holistic_set_password "$name" "$REPLY_PW"
 
     echo "[holistic] user '$name' created (groups: family, smbusers)"
+}
+
+cmd_user_adopt() {
+    require_root
+    local name="${1:-}"
+    [[ -z "$name" ]] && { echo "Usage: holistic user adopt <name>" >&2; exit 1; }
+    [[ "$name" =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || { echo "[holistic] ERROR: invalid username" >&2; exit 1; }
+    holistic_user_exists "$name" || { echo "[holistic] ERROR: no Linux user '$name' — adopt onboards an EXISTING OS user; use 'user add' to create a new one" >&2; exit 1; }
+    [[ "$(id -u "$name")" -ge 1000 ]] || { echo "[holistic] ERROR: refusing to adopt system user '$name' (uid < 1000)" >&2; exit 1; }
+
+    holistic_user_adopt "$name"
+    # One account, one password: set Linux + Samba together so the identity never diverges.
+    local REPLY_PW
+    read_password_twice "Set one password for '$name' (Linux login + dashboard + Samba): " || exit 1
+    holistic_set_password "$name" "$REPLY_PW"
+
+    echo "[holistic] adopted '$name' (groups: $HOLISTIC_GROUPS; drive: $HOLISTIC_USERS_ROOT/$name; one unified password set)"
+}
+
+cmd_user_unadopt() {
+    require_root
+    local name="${1:-}"
+    [[ -z "$name" ]] && { echo "Usage: holistic user unadopt <name>" >&2; exit 1; }
+    holistic_user_exists "$name" || { echo "[holistic] ERROR: no such user '$name'" >&2; exit 1; }
+    holistic_user_unadopt "$name"
+    echo "[holistic] unadopted '$name' (removed from $HOLISTIC_GROUPS + Samba; Linux account, home and drive kept)"
 }
 
 cmd_user_passwd() {
@@ -249,10 +276,12 @@ main() {
         user)
             shift
             case "${1:-}" in
-                add)    shift; cmd_user_add "$@" ;;
-                passwd) shift; cmd_user_passwd "$@" ;;
-                delete) shift; cmd_user_delete "$@" ;;
-                *)      echo "Usage: holistic user {add|passwd|delete} <name>" >&2; exit 1 ;;
+                add)     shift; cmd_user_add "$@" ;;
+                adopt)   shift; cmd_user_adopt "$@" ;;
+                unadopt) shift; cmd_user_unadopt "$@" ;;
+                passwd)  shift; cmd_user_passwd "$@" ;;
+                delete)  shift; cmd_user_delete "$@" ;;
+                *)       echo "Usage: holistic user {add|adopt|unadopt|passwd|delete} <name>" >&2; exit 1 ;;
             esac
             ;;
         invite)         shift; cmd_invite "$@" ;;
