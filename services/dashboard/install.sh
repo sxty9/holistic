@@ -49,7 +49,16 @@ if [[ ! -s /etc/holistic/jwt-secret ]]; then
 fi
 
 echo "[dashboard] building frontend..."
-( cd "$REPO_ROOT/frontend" && pnpm install --silent && pnpm --filter @holistic/app build )
+# pnpm runs as root here, and the build intentionally reaches sibling paths
+# (e.g. ../../services/*/ui), so it must run inside the repo — not an isolated copy.
+# Building in-tree as root would otherwise leave root-owned node_modules/dist in the
+# user's working copy, and a pre-existing one then blocks the next `pnpm install` with
+# a no-TTY purge prompt. Guard both: CI=true keeps pnpm non-interactive, and an EXIT
+# trap hands the tree back to the repo owner even if the build fails — so nothing
+# root-owned is ever left behind (this also self-heals trees from older installs).
+REPO_OWNER="$(stat -c '%u:%g' "$REPO_ROOT")"
+trap 'chown -R "$REPO_OWNER" "$REPO_ROOT/frontend" 2>/dev/null || true' EXIT
+( cd "$REPO_ROOT/frontend" && CI=true pnpm install --silent && pnpm --filter @holistic/app build )
 install -d -o holistic -g holistic "$WWW"
 rm -rf "${WWW:?}/"*
 cp -r "$REPO_ROOT/frontend/app/dist/." "$WWW/"
