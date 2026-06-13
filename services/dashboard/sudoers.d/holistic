@@ -4,5 +4,10 @@
 # User provisioning + invite consumption — run as root.
 holistic ALL=(root) NOPASSWD: /usr/local/sbin/holistic-user-add, /usr/local/sbin/holistic-user-passwd, /usr/local/sbin/holistic-user-delete, /usr/local/sbin/holistic-user-exists, /usr/local/sbin/holistic-invite-consume
 
+# Login password check — runs as root so pam_unix can read /etc/shadow (the
+# unprivileged backend cannot; unix_chkpwd lets a non-root caller verify only
+# its own account). Password is passed on stdin, never argv.
+holistic ALL=(root) NOPASSWD: /usr/local/sbin/holistic-pam-check
+
 # File broker — run AS the target family account only (the %smbusers ceiling, never root/system).
 holistic ALL=(%smbusers) NOPASSWD: /usr/local/sbin/holistic-fs

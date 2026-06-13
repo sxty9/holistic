@@ -43,6 +43,7 @@ class Settings:
     invites_path: str = os.environ.get("HOLISTIC_INVITES", "/var/lib/holistic/invites.json")
     revoked_path: str = os.environ.get("HOLISTIC_REVOKED", "/var/lib/holistic/revoked.json")
 
+    pam_check: str = os.environ.get("HOLISTIC_PAM_CHECK", "/usr/local/sbin/holistic-pam-check")
     fs_broker: str = os.environ.get("HOLISTIC_FS_BROKER", "/usr/local/sbin/holistic-fs")
     invite_consume: str = os.environ.get("HOLISTIC_INVITE_CONSUME", "/usr/local/sbin/holistic-invite-consume")
     user_add: str = os.environ.get("HOLISTIC_USER_ADD", "/usr/local/sbin/holistic-user-add")

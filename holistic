@@ -101,7 +101,7 @@ install_privileged_surface() {
 
     local w
     for w in holistic-user-add holistic-user-passwd holistic-user-delete \
-             holistic-user-exists holistic-invite-consume; do
+             holistic-user-exists holistic-invite-consume holistic-pam-check; do
         install -m 0755 -o root -g root "$DASHBOARD_DIR/sbin/$w" "/usr/local/sbin/$w"
     done
 
@@ -121,7 +121,8 @@ install_privileged_surface() {
                       /usr/local/sbin/holistic-user-passwd \
                       /usr/local/sbin/holistic-user-delete \
                       /usr/local/sbin/holistic-user-exists \
-                      /usr/local/sbin/holistic-invite-consume
+                      /usr/local/sbin/holistic-invite-consume \
+                      /usr/local/sbin/holistic-pam-check
 }
 
 # A NOPASSWD-to-root wrapper that is group/other-writable is a root escalation. Refuse.

@@ -35,8 +35,11 @@ if [ -z "$NODE_MAJOR" ] || [ "$NODE_MAJOR" -lt 22 ]; then
 fi
 corepack enable >/dev/null 2>&1 || npm install -g pnpm >/dev/null 2>&1
 
-# File broker — root-owned, group holistic, not group/other-writable.
-install -m 0750 -o root -g holistic "$HERE/sbin/holistic-fs" /usr/local/sbin/holistic-fs
+# File broker — root-owned, group smbusers, not group/other-writable. It runs AS the target
+# family user (`sudo -u <user>`), so that user must be able to EXECUTE it; group MUST be the
+# sudoers runas ceiling (%smbusers), NOT holistic — family users aren't in holistic, so a
+# holistic-group binary fails to exec with EACCES ("cannot execute … Permission denied").
+install -m 0750 -o root -g smbusers "$HERE/sbin/holistic-fs" /usr/local/sbin/holistic-fs
 
 # Validate the sudoers drop-in written by system_prep before relying on it.
 visudo -cf /etc/sudoers.d/holistic >/dev/null

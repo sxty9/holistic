@@ -1,0 +1,126 @@
+#!/usr/bin/python3
+"""holistic-pam-check <username>   — password on stdin (single line).
+
+Authenticates a login against the `holistic-dashboard` PAM service AS ROOT.
+
+Why a root wrapper exists: the dashboard backend runs as the unprivileged
+`holistic` user, which is NOT in group `shadow`. pam_unix in that process
+therefore cannot read /etc/shadow and falls back to the setgid-shadow helper
+`unix_chkpwd` — and unix_chkpwd lets a non-root caller verify ONLY its own
+account, so the backend could only ever authenticate `holistic` itself, never
+a normal Linux user. Run as root (via the narrow sudoers allowlist) pam_unix
+reads /etc/shadow directly and that restriction does not apply.
+
+Deliberately self-contained: it calls libpam through ctypes using the
+root-owned system interpreter. It must NOT depend on the venv at /opt/holistic
+(that tree is owned by `holistic`; a root program executing a holistic-owned
+interpreter would be a privilege-escalation vector).
+
+Exit: 0 ok · 1 auth/account denied · 2 bad input.
+"""
+import ctypes
+import ctypes.util
+import re
+import sys
+
+SERVICE = b"holistic-dashboard"
+USER_RE = re.compile(rb"^[a-z][a-z0-9_-]{0,31}$")
+PAM_PROMPT_ECHO_OFF = 1
+
+
+class PamHandle(ctypes.Structure):
+    _fields_ = [("handle", ctypes.c_void_p)]
+
+
+class PamMessage(ctypes.Structure):
+    _fields_ = [("msg_style", ctypes.c_int), ("msg", ctypes.c_char_p)]
+
+
+class PamResponse(ctypes.Structure):
+    # resp is a char* that PAM frees with free(); declare it c_void_p so we can
+    # store a strdup()'d address into it without ctypes copy semantics getting
+    # in the way.
+    _fields_ = [("resp", ctypes.c_void_p), ("resp_retcode", ctypes.c_int)]
+
+
+CONV_FUNC = ctypes.CFUNCTYPE(
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.POINTER(PamMessage)),
+    ctypes.POINTER(ctypes.POINTER(PamResponse)),
+    ctypes.c_void_p,
+)
+
+
+class PamConv(ctypes.Structure):
+    _fields_ = [("conv", CONV_FUNC), ("appdata_ptr", ctypes.c_void_p)]
+
+
+def _load(name, fallback):
+    return ctypes.CDLL(ctypes.util.find_library(name) or fallback, use_errno=True)
+
+
+libpam = _load("pam", "libpam.so.0")
+libc = _load("c", "libc.so.6")
+
+libc.calloc.restype = ctypes.c_void_p
+libc.calloc.argtypes = [ctypes.c_size_t, ctypes.c_size_t]
+libc.strdup.restype = ctypes.c_void_p
+libc.strdup.argtypes = [ctypes.c_char_p]
+
+libpam.pam_start.restype = ctypes.c_int
+libpam.pam_start.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(PamConv), ctypes.POINTER(PamHandle)]
+libpam.pam_authenticate.restype = ctypes.c_int
+libpam.pam_authenticate.argtypes = [PamHandle, ctypes.c_int]
+libpam.pam_acct_mgmt.restype = ctypes.c_int
+libpam.pam_acct_mgmt.argtypes = [PamHandle, ctypes.c_int]
+libpam.pam_end.restype = ctypes.c_int
+libpam.pam_end.argtypes = [PamHandle, ctypes.c_int]
+
+
+def authenticate(username: bytes, password: bytes) -> bool:
+    @CONV_FUNC
+    def conv(n_messages, messages, p_response, _app_data):
+        # PAM frees this array (and each resp) with free(), so allocate via libc.
+        addr = libc.calloc(n_messages, ctypes.sizeof(PamResponse))
+        if not addr:
+            return 5  # PAM_BUF_ERR
+        response = ctypes.cast(addr, ctypes.POINTER(PamResponse))
+        p_response[0] = response
+        for i in range(n_messages):
+            if messages[i].contents.msg_style == PAM_PROMPT_ECHO_OFF:
+                response[i].resp = libc.strdup(password)
+                response[i].resp_retcode = 0
+        return 0  # PAM_SUCCESS
+
+    handle = PamHandle()
+    conv_struct = PamConv(conv, None)
+    if libpam.pam_start(SERVICE, username, ctypes.byref(conv_struct), ctypes.byref(handle)) != 0:
+        return False
+    try:
+        if libpam.pam_authenticate(handle, 0) != 0:
+            return False
+        return libpam.pam_acct_mgmt(handle, 0) == 0
+    finally:
+        libpam.pam_end(handle, 0)
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print("holistic-pam-check: usage: holistic-pam-check <username>", file=sys.stderr)
+        return 2
+    username = sys.argv[1].encode()
+    if not USER_RE.match(username):
+        print("holistic-pam-check: invalid username", file=sys.stderr)
+        return 2
+    line = sys.stdin.buffer.readline()
+    if line.endswith(b"\n"):
+        line = line[:-1]
+    if not line:
+        print("holistic-pam-check: empty password", file=sys.stderr)
+        return 2
+    return 0 if authenticate(username, line) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
