@@ -29,6 +29,12 @@ holistic.local {
 
 # Cloudflare-tunnel origin: loopback-only HTTP, reachable only by cloudflared (sxgate
 # routes holistic.henrysoase.org → http://localhost:21487). Not exposed on the LAN.
-http://127.0.0.1:21487 {
+#
+# In Caddy the host part of a site address is a *matcher*, not a bind — `127.0.0.1:21487`
+# replies only to a literal `Host: 127.0.0.1:21487` and hands every other host (the
+# tunnel's forwarded hostname, or a browser opening `localhost`) an empty 200. So match
+# any host with `:21487`, and use `bind` to actually keep the listener loopback-only.
+http://:21487 {
+	bind 127.0.0.1 ::1
 	import holistic_app
 }

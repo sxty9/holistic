@@ -16,5 +16,10 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["holistic_api"]
 package-dir = { "" = "backend" }
+
+# Discover holistic_api AND its subpackages (routers, services, services.samba, auth,
+# accounts). A manual `packages = ["holistic_api"]` ships only the top-level modules, so
+# `from .routers import ...` then crashes at import and the service crash-loops.
+[tool.setuptools.packages.find]
+where = ["backend"]
