@@ -146,7 +146,18 @@ export function Badge({ variant = 'neutral', className, children }: { variant?: 
   return <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-caption font-medium', BADGE[variant], className)}>{children}</span>;
 }
 
-const BAR_TONE = { accent: 'bg-accent', success: 'bg-success', warning: 'bg-warning', danger: 'bg-danger' } as const;
+const BAR_TONE = {
+  accent: 'bg-accent',
+  success: 'bg-success',
+  warning: 'bg-warning',
+  danger: 'bg-danger',
+  // Per-component identity colors (hostek metrics).
+  cpu: 'bg-cpu',
+  ram: 'bg-ram',
+  gpu: 'bg-gpu',
+  net: 'bg-net',
+  ssd: 'bg-ssd',
+} as const;
 export function ProgressBar({ value, indeterminate, tone = 'accent', className }: { value?: number; indeterminate?: boolean; tone?: keyof typeof BAR_TONE; className?: string }) {
   return (
     <div className={cn('h-1.5 w-full overflow-hidden rounded-full bg-fill/20', className)}>

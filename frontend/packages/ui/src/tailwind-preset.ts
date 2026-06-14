@@ -34,6 +34,12 @@ const preset = {
         success: rgb('success'),
         warning: rgb('warning'),
         danger: rgb('danger'),
+        // Per-component identity colors (hostek metrics): bg-cpu/15, text-gpu, stroke-ssd, …
+        cpu: rgb('cpu'),
+        ram: rgb('ram'),
+        gpu: rgb('gpu'),
+        net: rgb('net'),
+        ssd: rgb('ssd'),
       },
       borderRadius: {
         xs: v('radius-xs'),

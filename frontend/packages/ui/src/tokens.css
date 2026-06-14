@@ -44,6 +44,14 @@
   --warning: 255 159 10;
   --danger: 255 59 48;
 
+  /* Per-component identity colors (Apple system colors, RGB channels for /opacity).
+     Used by hostek's metrics: each hardware component owns one color globally. */
+  --cpu: 52 199 89;   /* green  */
+  --ram: 10 132 255;  /* blue   */
+  --gpu: 175 82 222;  /* purple */
+  --net: 255 149 0;   /* orange */
+  --ssd: 48 176 199;  /* teal   */
+
   /* Apple "materials": translucent tint + saturation + blur, layered by thickness. */
   --material-ultrathin: rgba(255, 255, 255, 0.55);
   --material-thin: rgba(255, 255, 255, 0.68);
@@ -97,6 +105,13 @@
   --warning: 255 214 10;
   --danger: 255 69 58;
 
+  /* Per-component identity colors (slightly brighter on dark, like success/warning). */
+  --cpu: 48 209 88;
+  --ram: 10 132 255;
+  --gpu: 191 90 242;
+  --net: 255 159 10;
+  --ssd: 64 200 224;
+
   --material-ultrathin: rgba(28, 28, 30, 0.55);
   --material-thin: rgba(28, 28, 30, 0.68);
   --material-regular: rgba(28, 28, 30, 0.82);
@@ -125,6 +140,11 @@
     --success: 48 209 88;
     --warning: 255 214 10;
     --danger: 255 69 58;
+    --cpu: 48 209 88;
+    --ram: 10 132 255;
+    --gpu: 191 90 242;
+    --net: 255 159 10;
+    --ssd: 64 200 224;
     --material-ultrathin: rgba(28, 28, 30, 0.55);
     --material-thin: rgba(28, 28, 30, 0.68);
     --material-regular: rgba(28, 28, 30, 0.82);

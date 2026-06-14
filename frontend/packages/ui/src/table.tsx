@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { cn } from './lib/cn';
 import { ChevronDownIcon } from './icons';
 import { ScrollArea } from './primitives';
+import { Checkbox } from './controls';
 
 export type SortDir = 'asc' | 'desc';
 
@@ -15,6 +16,12 @@ export interface Column<Row> {
   render?: (row: Row) => ReactNode;
   /** Comparable value for sorting; required for `sortable` columns. */
   sortValue?: (row: Row) => number | string;
+  /** When `columnToggle` is on, whether this column can be hidden (default true). */
+  hideable?: boolean;
+  /** When `columnToggle` is on, start hidden (user can re-enable it). */
+  defaultHidden?: boolean;
+  /** Optional short label for the toggle checkbox (defaults to `header`). */
+  toggleLabel?: ReactNode;
 }
 
 export interface DataTableProps<Row> {
@@ -26,12 +33,17 @@ export interface DataTableProps<Row> {
   maxHeight?: number;
   onRowClick?: (row: Row) => void;
   emptyState?: ReactNode;
+  /** Render a row of checkboxes above the table to show/hide hideable columns. */
+  columnToggle?: boolean;
   className?: string;
 }
 
 /** Sortable, sticky-header data table (e.g. the Task-Manager process list). */
-export function DataTable<Row>({ columns, rows, rowKey, initialSort, maxHeight, onRowClick, emptyState, className }: DataTableProps<Row>) {
+export function DataTable<Row>({ columns, rows, rowKey, initialSort, maxHeight, onRowClick, emptyState, columnToggle, className }: DataTableProps<Row>) {
   const [sort, setSort] = useState<{ key: string; dir: SortDir } | null>(initialSort ?? null);
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set(columns.filter((c) => c.defaultHidden).map((c) => c.key)));
+
+  const visible = columnToggle ? columns.filter((c) => !hidden.has(c.key)) : columns;
 
   const sorted = useMemo(() => {
     if (!sort) return rows;
@@ -53,12 +65,34 @@ export function DataTable<Row>({ columns, rows, rowKey, initialSort, maxHeight, 
     setSort((s) => (s?.key === col.key ? { key: col.key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key: col.key, dir: 'desc' }));
   }
 
+  const toggleable = columns.filter((c) => c.hideable !== false);
+
   return (
-    <ScrollArea className={cn('w-full', className)} style={maxHeight ? { maxHeight } : undefined}>
-      <table className="w-full border-collapse text-footnote">
-        <thead className="sticky top-0 z-10 bg-surface-raised">
-          <tr className="border-b border-separator">
-            {columns.map((col) => (
+    <div className={cn('flex flex-col gap-2', className)}>
+      {columnToggle && toggleable.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-1">
+          {toggleable.map((col) => (
+            <Checkbox
+              key={col.key}
+              checked={!hidden.has(col.key)}
+              label={col.toggleLabel ?? col.header}
+              onChange={(checked) =>
+                setHidden((prev) => {
+                  const next = new Set(prev);
+                  if (checked) next.delete(col.key);
+                  else next.add(col.key);
+                  return next;
+                })
+              }
+            />
+          ))}
+        </div>
+      )}
+      <ScrollArea className="w-full" style={maxHeight ? { maxHeight } : undefined}>
+        <table className="w-full border-collapse text-footnote">
+          <thead className="sticky top-0 z-10 bg-surface-raised">
+            <tr className="border-b border-separator">
+              {visible.map((col) => (
               <th
                 key={col.key}
                 style={col.width ? { width: col.width } : undefined}
@@ -86,7 +120,7 @@ export function DataTable<Row>({ columns, rows, rowKey, initialSort, maxHeight, 
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={cn('border-b border-separator/60 last:border-0', onRowClick && 'cursor-pointer hover:bg-fill/5')}
             >
-              {columns.map((col) => (
+              {visible.map((col) => (
                 <td
                   key={col.key}
                   className={cn('px-3 py-1.5 text-text-primary', col.align === 'right' ? 'text-right tabular-nums' : 'text-left')}
@@ -98,7 +132,8 @@ export function DataTable<Row>({ columns, rows, rowKey, initialSort, maxHeight, 
           ))}
         </tbody>
       </table>
-      {sorted.length === 0 && emptyState}
-    </ScrollArea>
+        {sorted.length === 0 && emptyState}
+      </ScrollArea>
+    </div>
   );
 }

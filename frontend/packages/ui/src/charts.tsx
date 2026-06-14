@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import { cn } from './lib/cn';
 
 // Token-driven palette (channels → rgb()). Series cycle through these unless a color is given.
@@ -126,5 +126,30 @@ export function Sparkline({ data, color = 'rgb(var(--accent))', height = 28, fil
       )}
       {d && <path d={d} fill="none" stroke={color} strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
     </svg>
+  );
+}
+
+export interface LegendItem {
+  label: ReactNode;
+  /** CSS color of the swatch (e.g. 'rgb(var(--cpu))'). */
+  color: string;
+}
+
+export interface LegendProps {
+  items: LegendItem[];
+  className?: string;
+}
+
+/** Inline color key for multi-series charts — a row of swatch + label pairs. */
+export function Legend({ items, className }: LegendProps) {
+  return (
+    <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1', className)}>
+      {items.map((it, i) => (
+        <span key={i} className="inline-flex items-center gap-1.5 text-caption text-text-secondary">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: it.color }} aria-hidden="true" />
+          {it.label}
+        </span>
+      ))}
+    </div>
   );
 }

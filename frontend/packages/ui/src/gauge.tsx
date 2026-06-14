@@ -2,13 +2,19 @@ import type { ReactNode } from 'react';
 import { cn } from './lib/cn';
 import { formatPercent } from './lib/format';
 
-export type Tone = 'accent' | 'success' | 'warning' | 'danger';
+export type Tone = 'accent' | 'success' | 'warning' | 'danger' | 'cpu' | 'ram' | 'gpu' | 'net' | 'ssd';
 
 const TONE: Record<Tone, string> = {
   accent: 'rgb(var(--accent))',
   success: 'rgb(var(--success))',
   warning: 'rgb(var(--warning))',
   danger: 'rgb(var(--danger))',
+  // Per-component identity colors (see tokens.css).
+  cpu: 'rgb(var(--cpu))',
+  ram: 'rgb(var(--ram))',
+  gpu: 'rgb(var(--gpu))',
+  net: 'rgb(var(--net))',
+  ssd: 'rgb(var(--ssd))',
 };
 const TRACK = 'rgb(var(--fill) / 0.18)';
 

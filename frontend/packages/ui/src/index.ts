@@ -59,8 +59,8 @@ export { AuthScene, AuthCard, HolisticMark } from './auth';
 export { CodeBlock } from './code';
 
 // Metrics & data visualization
-export { LineChart, Sparkline } from './charts';
-export type { ChartSeries, LineChartProps, SparklineProps } from './charts';
+export { LineChart, Sparkline, Legend } from './charts';
+export type { ChartSeries, LineChartProps, SparklineProps, LegendItem, LegendProps } from './charts';
 export { Gauge, Donut, toneForLoad } from './gauge';
 export type { Tone, GaugeProps, DonutProps, DonutSegment } from './gauge';
 export { Stat } from './stat';

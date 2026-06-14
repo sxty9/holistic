@@ -71,3 +71,7 @@ export const ActivityIcon = icon(<path d="M3 12h4l2-6 4 12 2-6h6" />);
 export const GaugeIcon = icon(<><path d="M5 18a8 8 0 1 1 14 0" /><path d="m12 13 4-4" /><circle cx="12" cy="13" r="1.2" fill="currentColor" stroke="none" /></>);
 export const ClockIcon = icon(<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>);
 export const PowerIcon = icon(<><path d="M12 3v8" /><path d="M6.6 7a8 8 0 1 0 10.8 0" /></>);
+export const SsdIcon = icon(<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M7 9h6M7 12h4" /><circle cx="16.5" cy="14.5" r="1.4" fill="currentColor" stroke="none" /></>);
+export const MotherboardIcon = icon(<><rect x="3" y="3" width="18" height="18" rx="2" /><rect x="6.5" y="6.5" width="6" height="6" rx="1" /><path d="M15 7h3M15 10h3M7 16h10" /><circle cx="16" cy="16" r="1.1" fill="currentColor" stroke="none" /><circle cx="19" cy="16" r="1.1" fill="currentColor" stroke="none" /></>);
+export const FanIcon = icon(<><circle cx="12" cy="12" r="2" /><path d="M12 10c0-3 .5-6-1-6S8.5 7 12 10ZM14 12c3 0 6-.5 6 1s-3 1.5-6-1ZM12 14c0 3-.5 6 1 6s1.5-3-1-6ZM10 12c-3 0-6 .5-6-1s3-1.5 6 1Z" /></>);
+export const EthernetIcon = icon(<><rect x="3" y="8" width="18" height="11" rx="1.5" /><path d="M7 19v-3M10 19v-3M14 19v-3M17 19v-3M9 8V5h6v3" /></>);
