@@ -66,7 +66,7 @@ export { CodeBlock } from './code';
 
 // Metrics & data visualization
 export { LineChart, Sparkline, Legend, StreamGraph } from './charts';
-export type { ChartSeries, LineChartProps, SparklineProps, LegendItem, LegendProps, StreamSeries, StreamGraphProps } from './charts';
+export type { ChartSeries, LineChartProps, SparklineProps, LegendItem, LegendProps, StreamSeries, StreamGraphProps, RefLine } from './charts';
 export { Gauge, Donut, toneForLoad } from './gauge';
 export type { Tone, GaugeProps, DonutProps, DonutSegment } from './gauge';
 export { Stat } from './stat';

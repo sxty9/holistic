@@ -42,6 +42,12 @@ export interface ChartSeries {
   fill?: boolean;
 }
 
+export interface RefLine {
+  value: number;
+  color?: string;
+  dashed?: boolean;
+}
+
 export interface LineChartProps {
   series: ChartSeries[];
   height?: number;
@@ -49,13 +55,16 @@ export interface LineChartProps {
   min?: number;
   max?: number;
   strokeWidth?: number;
+  /** Horizontal reference lines (e.g. a critical-temperature threshold). */
+  refLines?: RefLine[];
   className?: string;
 }
 
 /** Lightweight multi-series line/area chart (pure SVG, no dependencies). */
-export function LineChart({ series, height = 120, min, max, strokeWidth = 2, className }: LineChartProps) {
+export function LineChart({ series, height = 120, min, max, strokeWidth = 2, refLines, className }: LineChartProps) {
   const gid = useId().replace(/:/g, '');
   const [lo, hi] = extent(series, min, max);
+  const yOf = (v: number) => height - ((Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo || 1)) * height;
   return (
     <svg
       viewBox={`0 0 ${VBW} ${height}`}
@@ -64,6 +73,22 @@ export function LineChart({ series, height = 120, min, max, strokeWidth = 2, cla
       style={{ height }}
       aria-hidden="true"
     >
+      {refLines?.map((r, i) => {
+        const y = yOf(r.value).toFixed(2);
+        return (
+          <line
+            key={`ref${i}`}
+            x1="0"
+            y1={y}
+            x2={VBW}
+            y2={y}
+            stroke={r.color ?? 'rgb(var(--danger))'}
+            strokeWidth={1}
+            strokeDasharray={r.dashed === false ? undefined : '4 3'}
+            vectorEffect="non-scaling-stroke"
+          />
+        );
+      })}
       {series.map((s, i) => {
         const color = s.color ?? PALETTE[i % PALETTE.length];
         const d = linePath(s.data, lo, hi, height);
