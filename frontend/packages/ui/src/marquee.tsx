@@ -3,55 +3,56 @@ import { cn } from './lib/cn';
 import { Tooltip } from './overlay/tooltip';
 
 export interface MarqueeProps {
-  /** Full text; auto-scrolls when it overflows and shows in a tooltip on hover. */
+  /** Full text; continuously scrolls when it overflows and shows in a tooltip on hover. */
   text: string;
   className?: string;
-  /** Scroll speed in px/sec while overflowing. */
+  /** Scroll speed in px/sec. */
   speed?: number;
+  /** Gap (px) between the repeated copies of the text in the seamless loop. */
+  gap?: number;
 }
 
-/** Single-line text that ping-pong auto-scrolls when it overflows its box (paused
- *  on hover) and reveals the full text in a tooltip. A no-op when the text fits. */
-export function Marquee({ text, className, speed = 28 }: MarqueeProps) {
+/** Single-line text that, when it overflows its box, glides continuously to reveal the
+ *  whole string (seamless ticker, paused on hover) and exposes the full text in a
+ *  tooltip. A no-op — plain truncating text — when it already fits. */
+export function Marquee({ text, className, speed = 40, gap = 48 }: MarqueeProps) {
   const boxRef = useRef<HTMLDivElement>(null);
-  const innerRef = useRef<HTMLSpanElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const hovered = useRef(false);
-  const [overflow, setOverflow] = useState(0);
+  const [overflow, setOverflow] = useState(false);
+  const [segW, setSegW] = useState(0);
 
-  // Measure overflow synchronously (avoids a layout flash) and on resize.
+  // Measure the single-copy width vs the box; re-measure on resize. useLayoutEffect runs
+  // before paint, so the overflow decision is settled without a visible flash.
   useLayoutEffect(() => {
     const box = boxRef.current;
-    const inner = innerRef.current;
-    if (!box || !inner) return;
-    const measure = () => setOverflow(Math.max(0, inner.scrollWidth - box.clientWidth));
-    measure();
-    const ro = new ResizeObserver(measure);
+    const m = measureRef.current;
+    if (!box || !m) return;
+    const update = () => {
+      const tw = m.scrollWidth;
+      setOverflow(tw - box.clientWidth > 1);
+      setSegW(tw + gap);
+    };
+    update();
+    const ro = new ResizeObserver(update);
     ro.observe(box);
-    ro.observe(inner);
+    ro.observe(m);
     return () => ro.disconnect();
-  }, [text]);
+  }, [text, gap]);
 
-  // Drive the scroll with the Web Animations API — distance/duration scale with the
-  // overflow, and it pauses while hovered so the value stays readable.
+  // Seamless leftward scroll over exactly one segment width (text + gap): when the first
+  // copy has fully scrolled off, the second copy sits where the first began, so the loop
+  // is invisible. Paused while hovered (a ref keeps that across resize-driven rebuilds).
   useLayoutEffect(() => {
-    const box = boxRef.current;
-    const inner = innerRef.current;
-    if (!box || !inner) return;
-    if (overflow <= 1) {
-      inner.style.transform = '';
-      return;
-    }
-    const travel = (overflow / speed) * 1000;
-    const anim = inner.animate(
-      [
-        { transform: 'translateX(0)', offset: 0 },
-        { transform: 'translateX(0)', offset: 0.12 },
-        { transform: `translateX(${-overflow}px)`, offset: 0.5 },
-        { transform: `translateX(${-overflow}px)`, offset: 0.62 },
-        { transform: 'translateX(0)', offset: 1 },
-      ],
-      { duration: travel * 2 + 2400, iterations: Infinity, easing: 'ease-in-out' },
+    const track = trackRef.current;
+    if (!track || !overflow || segW <= 0) return;
+    const anim = track.animate(
+      [{ transform: 'translateX(0)' }, { transform: `translateX(${-segW}px)` }],
+      { duration: (segW / speed) * 1000, iterations: Infinity, easing: 'linear' },
     );
+    if (hovered.current) anim.pause();
+    const box = boxRef.current;
     const pause = () => {
       hovered.current = true;
       anim.pause();
@@ -60,24 +61,32 @@ export function Marquee({ text, className, speed = 28 }: MarqueeProps) {
       hovered.current = false;
       anim.play();
     };
-    box.addEventListener('mouseenter', pause);
-    box.addEventListener('mouseleave', play);
-    // Survive effect re-runs (resize/text change): if the pointer is already inside
-    // the box, keep the freshly created animation paused so the text stays readable.
-    if (hovered.current) anim.pause();
+    box?.addEventListener('mouseenter', pause);
+    box?.addEventListener('mouseleave', play);
     return () => {
       anim.cancel();
-      box.removeEventListener('mouseenter', pause);
-      box.removeEventListener('mouseleave', play);
+      box?.removeEventListener('mouseenter', pause);
+      box?.removeEventListener('mouseleave', play);
     };
-  }, [overflow, speed]);
+  }, [overflow, segW, speed]);
 
   return (
-    <Tooltip content={text} disabled={overflow <= 1}>
-      <div ref={boxRef} className={cn('overflow-hidden whitespace-nowrap', className)}>
-        <span ref={innerRef} className="inline-block will-change-transform">
+    <Tooltip content={text} disabled={!overflow}>
+      <div ref={boxRef} className={cn('relative overflow-hidden', className)}>
+        {/* Hidden single-copy measurer (no layout impact). */}
+        <span ref={measureRef} className="invisible absolute whitespace-nowrap" aria-hidden>
           {text}
         </span>
+        {overflow ? (
+          <div ref={trackRef} className="inline-flex w-max whitespace-nowrap will-change-transform">
+            <span style={{ paddingRight: gap }}>{text}</span>
+            <span style={{ paddingRight: gap }} aria-hidden>
+              {text}
+            </span>
+          </div>
+        ) : (
+          <span className="block truncate">{text}</span>
+        )}
       </div>
     </Tooltip>
   );

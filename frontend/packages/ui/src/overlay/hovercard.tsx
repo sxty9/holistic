@@ -11,13 +11,15 @@ export interface HoverPanelProps {
   className?: string;
   panelClassName?: string;
   width?: number;
+  /** Render the trigger as a full-width block (to wrap cards/rows) instead of inline. */
+  block?: boolean;
 }
 
 /** A hover-activated floating panel that persists while the pointer is over the
  *  trigger or the panel, and dismisses shortly after the pointer leaves both. It
  *  renders in a portal with fixed positioning so table/overflow clipping can't cut
  *  it off, and re-anchors on scroll/resize. */
-export function HoverPanel({ children, panel, className, panelClassName, width = 340 }: HoverPanelProps) {
+export function HoverPanel({ children, panel, className, panelClassName, width = 340, block }: HoverPanelProps) {
   const triggerRef = useRef<HTMLSpanElement>(null);
   const closeTimer = useRef<number | undefined>(undefined);
   const [open, setOpen] = useState(false);
@@ -58,7 +60,7 @@ export function HoverPanel({ children, panel, className, panelClassName, width =
 
   return (
     <>
-      <span ref={triggerRef} className={cn('inline-flex', className)} onMouseEnter={show} onMouseLeave={hide}>
+      <span ref={triggerRef} className={cn(block ? 'block w-full' : 'inline-flex', className)} onMouseEnter={show} onMouseLeave={hide}>
         {children}
       </span>
       {open &&
