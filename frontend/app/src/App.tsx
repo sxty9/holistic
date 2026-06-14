@@ -15,6 +15,7 @@ import {
   toast,
   type HolisticUser,
   type ServiceContextProps,
+  type ServicePlugin,
 } from '@holistic/ui';
 import { authApi, scopedApi } from './api/holisticClient';
 import { SERVICES, serviceById } from './registry';
@@ -56,14 +57,22 @@ function Shell({ user, onSignOut }: { user: HolisticUser; onSignOut: () => void 
   const [title, setTitle] = useState<string | null>(null);
   const [pwOpen, setPwOpen] = useState(false);
 
+  const isVisible = (s: ServicePlugin) => s.visible?.(user) ?? true;
+  const visibleServices = SERVICES.filter(isVisible);
+
   const match = location.pathname.match(/^\/app\/([^/]+)(?:\/(.*))?/);
-  const serviceId = match?.[1] ?? SERVICES[0]?.id;
+  const requestedId = match?.[1];
   const subPath = match?.[2] ?? '';
-  const active = serviceId ? serviceById(serviceId) : undefined;
+  const requested = requestedId ? serviceById(requestedId) : undefined;
+  // Route only to services the user may actually see — the same gate as the sidebar.
+  // A URL naming an unknown service, or one the user can't access (e.g. /app/privleg
+  // carried over from another session), falls back to their first visible service.
+  const active = requested && isVisible(requested) ? requested : visibleServices[0];
+  const serviceId = active?.id;
 
   useEffect(() => {
-    if (!match && SERVICES[0]) navigate(`/app/${SERVICES[0].id}`, { replace: true });
-  }, [match, navigate]);
+    if (active && requestedId !== active.id) navigate(`/app/${active.id}`, { replace: true });
+  }, [active, requestedId, navigate]);
   useEffect(() => {
     setTitle(null);
   }, [serviceId]);
@@ -83,7 +92,7 @@ function Shell({ user, onSignOut }: { user: HolisticUser; onSignOut: () => void 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active?.id, subPath, user]);
 
-  const items = SERVICES.filter((s) => s.visible?.(user) ?? true).map((s) => ({ id: s.id, label: s.displayName, icon: s.icon }));
+  const items = visibleServices.map((s) => ({ id: s.id, label: s.displayName, icon: s.icon }));
 
   return (
     <AppShell
