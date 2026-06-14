@@ -129,6 +129,58 @@ export function Sparkline({ data, color = 'rgb(var(--accent))', height = 28, fil
   );
 }
 
+export interface StreamSeries {
+  label: string;
+  /** CSS fill color (e.g. 'rgb(var(--cpu))'). */
+  color: string;
+  data: number[];
+}
+
+export interface StreamGraphProps {
+  series: StreamSeries[];
+  height?: number;
+  className?: string;
+}
+
+/** Stacked-area ("stream") chart: each series is filled and stacked on the one
+ *  below it, sharing an auto-scaled y-axis. Pair with <Legend> for series names. */
+export function StreamGraph({ series, height = 120, className }: StreamGraphProps) {
+  const n = series.reduce((m, s) => Math.max(m, s.data.length), 0);
+  if (n === 0 || series.length === 0) {
+    return <svg viewBox={`0 0 ${VBW} ${height}`} className={cn('w-full', className)} style={{ height }} aria-hidden="true" />;
+  }
+  // Cumulative stack tops per x; the running max total sets the y-scale.
+  const tops: number[][] = [];
+  const cum = new Array(n).fill(0);
+  for (const s of series) {
+    const top = new Array(n);
+    for (let i = 0; i < n; i++) {
+      cum[i] += Math.max(0, s.data[i] ?? 0);
+      top[i] = cum[i];
+    }
+    tops.push(top);
+  }
+  const maxTotal = Math.max(1, ...cum);
+  const x = (i: number) => (n === 1 ? VBW / 2 : (i / (n - 1)) * VBW);
+  const y = (v: number) => height - (v / maxTotal) * height;
+  return (
+    <svg viewBox={`0 0 ${VBW} ${height}`} preserveAspectRatio="none" className={cn('w-full', className)} style={{ height }} aria-hidden="true">
+      {series.map((s, si) => {
+        const upper = tops[si];
+        const lower = si === 0 ? null : tops[si - 1];
+        let d = `M${x(0).toFixed(2)} ${y(upper[0]).toFixed(2)}`;
+        for (let i = 1; i < n; i++) d += ` L${x(i).toFixed(2)} ${y(upper[i]).toFixed(2)}`;
+        if (lower) {
+          for (let i = n - 1; i >= 0; i--) d += ` L${x(i).toFixed(2)} ${y(lower[i]).toFixed(2)}`;
+        } else {
+          d += ` L${x(n - 1).toFixed(2)} ${height} L${x(0).toFixed(2)} ${height}`;
+        }
+        return <path key={si} d={`${d} Z`} fill={s.color} fillOpacity={0.85} stroke="none" />;
+      })}
+    </svg>
+  );
+}
+
 export interface LegendItem {
   label: ReactNode;
   /** CSS color of the swatch (e.g. 'rgb(var(--cpu))'). */

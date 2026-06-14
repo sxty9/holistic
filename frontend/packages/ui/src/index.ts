@@ -47,6 +47,12 @@ export { toast, dismissToast, Toaster } from './overlay/toast';
 export type { ToastVariant, ToastItem } from './overlay/toast';
 export { confirm, ConfirmRoot } from './overlay/confirm';
 export type { ConfirmOptions } from './overlay/confirm';
+export { Tooltip } from './overlay/tooltip';
+export type { TooltipProps } from './overlay/tooltip';
+export { HoverPanel } from './overlay/hovercard';
+export type { HoverPanelProps } from './overlay/hovercard';
+export { Marquee } from './marquee';
+export type { MarqueeProps } from './marquee';
 
 // Shell
 export { AppShell, Sidebar, TopBar, ContentRegion, useTheme } from './shell';
@@ -59,8 +65,8 @@ export { AuthScene, AuthCard, HolisticMark } from './auth';
 export { CodeBlock } from './code';
 
 // Metrics & data visualization
-export { LineChart, Sparkline, Legend } from './charts';
-export type { ChartSeries, LineChartProps, SparklineProps, LegendItem, LegendProps } from './charts';
+export { LineChart, Sparkline, Legend, StreamGraph } from './charts';
+export type { ChartSeries, LineChartProps, SparklineProps, LegendItem, LegendProps, StreamSeries, StreamGraphProps } from './charts';
 export { Gauge, Donut, toneForLoad } from './gauge';
 export type { Tone, GaugeProps, DonutProps, DonutSegment } from './gauge';
 export { Stat } from './stat';
