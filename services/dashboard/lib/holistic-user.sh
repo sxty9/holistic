@@ -19,6 +19,20 @@ holistic_user_exists() {
     id "$1" &>/dev/null
 }
 
+# Add a user to every `default: true` rights group declared under permissions.d, so a
+# host without privleg keeps prior behaviour (the right is on until an admin revokes it).
+# Best-effort + idempotent; no-op if no service declares default-on rights.
+holistic_user_grant_defaults() {
+    local name="$1" perms_tool g
+    perms_tool="$(dirname "${BASH_SOURCE[0]}")/holistic-perms.py"
+    [[ -f "$perms_tool" ]] || return 0
+    while read -r g; do
+        [[ -n "$g" ]] || continue
+        groupadd -f "$g" 2>/dev/null || true
+        gpasswd -a "$name" "$g" >/dev/null 2>&1 || true
+    done < <(python3 "$perms_tool" default-groups 2>/dev/null || true)
+}
+
 # Create the Linux account + storage + group membership. $2 = display name (GECOS, optional).
 holistic_user_create_account() {
     local name="$1" gecos="${2:-}"
@@ -26,6 +40,7 @@ holistic_user_create_account() {
     [[ -n "$gecos" ]] && args+=(-c "$gecos")
     useradd "${args[@]}" "$name"
     usermod -aG "$HOLISTIC_GROUPS" "$name"
+    holistic_user_grant_defaults "$name"
     chown "$name:$name" "$HOLISTIC_USERS_ROOT/$name"
     chmod 0700 "$HOLISTIC_USERS_ROOT/$name"
 }
@@ -36,6 +51,7 @@ holistic_user_create_account() {
 holistic_user_adopt() {
     local name="$1"
     usermod -aG "$HOLISTIC_GROUPS" "$name"
+    holistic_user_grant_defaults "$name"
     mkdir -p "$HOLISTIC_USERS_ROOT/$name"
     chown "$name:" "$HOLISTIC_USERS_ROOT/$name"   # group = the user's login group
     chmod 0700 "$HOLISTIC_USERS_ROOT/$name"

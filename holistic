@@ -6,6 +6,8 @@ SERVICES_DIR="$REPO_ROOT/services"
 MANIFEST="$SERVICES_DIR/manifest"
 DASHBOARD_DIR="$SERVICES_DIR/dashboard"
 INVITES_TOOL="$DASHBOARD_DIR/lib/holistic-invites.py"
+PERMS_TOOL="$DASHBOARD_DIR/lib/holistic-perms.py"
+PERMS_DIR="/etc/holistic/permissions.d"
 
 # Shared provisioning logic (single source of truth, also used by the sudo wrappers).
 source "$DASHBOARD_DIR/lib/holistic-user.sh"
@@ -29,6 +31,7 @@ Usage:
   holistic update                   Pull latest repo + re-run setup
   holistic list                     List services in install order
   holistic status                   Show whether each service is running
+  holistic perms list|validate      List/validate service rights manifests (permissions.d)
   holistic help                     Show this help
 EOF
 }
@@ -77,6 +80,7 @@ system_prep() {
     getent passwd holistic >/dev/null || \
         useradd --system --shell /usr/sbin/nologin --home-dir /var/lib/holistic holistic
     install -d -o holistic -g holistic -m 0755 /etc/holistic
+    install -d -o holistic -g holistic -m 0755 /etc/holistic/permissions.d  # service rights manifests (drop-in)
     install -d -o holistic -g holistic -m 2750 /var/lib/holistic   # setgid: invites/secrets stay group-readable
 
     # Storage layout
@@ -98,6 +102,7 @@ install_privileged_surface() {
 
     install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-user.sh"   /usr/local/lib/holistic/holistic-user.sh
     install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-invites.py" /usr/local/lib/holistic/holistic-invites.py
+    install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-perms.py"  /usr/local/lib/holistic/holistic-perms.py
 
     local w
     for w in holistic-user-add holistic-user-passwd holistic-user-delete \
@@ -165,7 +170,27 @@ cmd_setup() {
     while read -r svc; do
         run_service "$svc"
     done < <(read_manifest)
+
+    # Reconcile the rights groups every service declared, backfill default-on rights for
+    # existing users (so behaviour is unchanged), then sanity-check the manifests.
+    if [[ -f "$PERMS_TOOL" ]]; then
+        python3 "$PERMS_TOOL" ensure-groups "$PERMS_DIR" || true
+        python3 "$PERMS_TOOL" grant-defaults "$PERMS_DIR" || true
+        python3 "$PERMS_TOOL" validate "$PERMS_DIR" || \
+            echo "[holistic] WARN: permission manifests have issues (see above)" >&2
+    fi
     echo "[holistic] setup complete"
+}
+
+cmd_perms() {
+    local sub="${1:-list}"; shift || true
+    case "$sub" in
+        list)          python3 "$PERMS_TOOL" list "$PERMS_DIR" ;;
+        validate)      python3 "$PERMS_TOOL" validate "$PERMS_DIR" ;;
+        groups)        python3 "$PERMS_TOOL" groups "$PERMS_DIR" ;;
+        ensure-groups) require_root; python3 "$PERMS_TOOL" ensure-groups "$PERMS_DIR" ;;
+        *) echo "Usage: holistic perms {list|validate|groups|ensure-groups}" >&2; exit 1 ;;
+    esac
 }
 
 cmd_user_add() {
@@ -323,6 +348,7 @@ main() {
             esac
             ;;
         invite)         shift; cmd_invite "$@" ;;
+        perms)          shift; cmd_perms "$@" ;;
         update)         cmd_update ;;
         list)           cmd_list ;;
         status)         cmd_status ;;

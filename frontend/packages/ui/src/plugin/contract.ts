@@ -84,3 +84,66 @@ export interface FileRoot {
 export interface FileActionContext {
   entries: FileEntry[];
 }
+
+/* ────────────────────────────── Rights standard ──────────────────────────────
+ * The holistic-wide way a service declares which fine-grained rights it offers
+ * for NON-admin users. Each right is backed 1:1 by a Linux group; granting a
+ * right = adding the user to that group. Admins (sudo) implicitly have every
+ * right and are never listed here. A service drops its manifest at install time
+ * to /etc/holistic/permissions.d/<service>.json; the `privleg` service
+ * aggregates all manifests to render the rights editor.
+ *
+ * Enforcement everywhere is uniform:
+ *     userHasRight(user, perm) = user.isAdmin || perm.group ∈ user.groups
+ * `default` only controls INITIAL group membership (see PermissionDecl.default), so a
+ * host WITHOUT privleg behaves exactly as before: default:false rights are admin-only
+ * (empty group) and default:true rights stay granted to everyone (provisioning grants
+ * them). privleg later grants default:false rights and revokes default:true ones.
+ */
+
+/** A single fine-grained right a service exposes to non-admin users. */
+export interface PermissionDecl {
+  /** Service-local, stable id. Fully-qualified form: `<service>:<category>:<id>`. */
+  id: string;
+  /** Human label shown in the rights editor. */
+  label: string;
+  /** Optional longer explanation of what the right unlocks. */
+  description?: string;
+  /** Linux group backing this right — the authority for storage AND enforcement.
+   *  MUST be `hp_`-prefixed and match /^hp_[a-z0-9][a-z0-9_-]{0,27}$/ (<=31 chars).
+   *  The mandatory prefix is a security boundary: privleg only ever toggles hp_*
+   *  groups, so it can never be tricked into touching sudo/family/smbusers. */
+  group: string;
+  /** Baseline membership for non-admins (enforcement is the same either way):
+   *  - false / omitted: the group starts empty; privleg GRANTS the right per user.
+   *  - true: provisioning auto-adds every user to the group, so the right is on by
+   *    default (prior behaviour); privleg REVOKES it per user. */
+  default?: boolean;
+  /** UI hint: require an explicit confirm before granting (e.g. power, delete). */
+  dangerous?: boolean;
+}
+
+/** A sensible grouping of related rights within one service. */
+export interface PermissionCategory {
+  id: string;
+  label: string;
+  description?: string;
+  permissions: PermissionDecl[];
+}
+
+/** What a service declares to the holistic rights standard.
+ *  Dropped to /etc/holistic/permissions.d/<service>.json at install time. */
+export interface PermissionManifest {
+  /** MUST equal the ServicePlugin id (== service directory name). */
+  service: string;
+  /** Bumped whenever the declared rights change. */
+  version: number;
+  categories: PermissionCategory[];
+}
+
+/** Additive enforcement rule, shared by every service UI and the privleg editor.
+ *  A host without privleg has empty `hp_*` groups, so non-admins resolve to
+ *  admin-only — identical to pre-rights-standard behaviour. */
+export function userHasRight(user: Pick<HolisticUser, 'isAdmin' | 'groups'>, group: string): boolean {
+  return user.isAdmin || user.groups.includes(group);
+}

@@ -78,6 +78,13 @@ systemctl daemon-reload
 systemctl enable holistic-dashboard >/dev/null 2>&1 || true
 systemctl restart holistic-dashboard
 
+# Rights standard: declare samba's permissions (drop-in) + create their backing groups.
+# `holistic setup` reconciles default-on rights for existing users afterwards.
+echo "[dashboard] declaring samba permissions..."
+install -d -o holistic -g holistic -m 0755 /etc/holistic/permissions.d
+install -m 0644 "$HERE/permissions/samba.json" /etc/holistic/permissions.d/samba.json
+python3 "$HERE/lib/holistic-perms.py" ensure-groups /etc/holistic/permissions.d
+
 echo "[dashboard] configuring Caddy..."
 install -d /etc/caddy
 install -d /etc/caddy/conf.d   # drop-in dir for per-service routes (e.g. hostek); imported by the Caddyfile

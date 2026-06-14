@@ -12,6 +12,23 @@ from . import fsclient, paths
 
 router = APIRouter(prefix="/api/services/samba", tags=["samba"])
 
+# Rights standard: writing to the shared Family space is a `default: true` right —
+# provisioning grants `hp_samba_family_write` to every user, so behaviour is unchanged
+# unless an admin revokes it via privleg. Private "me/" space is never gated.
+SAMBA_FAMILY_WRITE = "hp_samba_family_write"
+
+
+def _root_key(vpath: str) -> str:
+    return vpath.strip("/").split("/", 1)[0]
+
+
+def _require_family_write(user: dict, *vpaths: str) -> None:
+    """403 if any target lives in the Family share and the user lacks the write right."""
+    if user.get("isAdmin") or SAMBA_FAMILY_WRITE in user.get("groups", []):
+        return
+    if any(_root_key(v) == "family" for v in vpaths):
+        raise HTTPException(403, "You do not have permission to modify the shared Family space")
+
 
 def _abspath(user: str, vpath: str) -> str:
     try:
@@ -146,6 +163,7 @@ class DeleteBody(BaseModel):
 
 @router.post("/fs/mkdir", dependencies=[Depends(csrf_guard)])
 def fs_mkdir(body: MkdirBody, user: dict = Depends(current_user)):
+    _require_family_write(user, body.path)
     parent = _abspath(user["username"], body.path)
     target = os.path.join(parent, os.path.basename(body.name))
     try:
@@ -156,6 +174,7 @@ def fs_mkdir(body: MkdirBody, user: dict = Depends(current_user)):
 
 @router.post("/fs/rename", dependencies=[Depends(csrf_guard)])
 def fs_rename(body: RenameBody, user: dict = Depends(current_user)):
+    _require_family_write(user, body.path)
     abspath = _abspath(user["username"], body.path)
     try:
         return fsclient.run_json(user["username"], "rename", abspath, body.newName)
@@ -165,6 +184,7 @@ def fs_rename(body: RenameBody, user: dict = Depends(current_user)):
 
 @router.post("/fs/move", dependencies=[Depends(csrf_guard)])
 def fs_move(body: MoveBody, user: dict = Depends(current_user)):
+    _require_family_write(user, body.src, body.dstDir)  # move both reads from src and writes to dst
     src = _abspath(user["username"], body.src)
     dstdir = _abspath(user["username"], body.dstDir)
     try:
@@ -175,6 +195,7 @@ def fs_move(body: MoveBody, user: dict = Depends(current_user)):
 
 @router.post("/fs/copy", dependencies=[Depends(csrf_guard)])
 def fs_copy(body: MoveBody, user: dict = Depends(current_user)):
+    _require_family_write(user, body.dstDir)  # copy only writes to dst; reading src is allowed
     src = _abspath(user["username"], body.src)
     dstdir = _abspath(user["username"], body.dstDir)
     try:
@@ -185,6 +206,7 @@ def fs_copy(body: MoveBody, user: dict = Depends(current_user)):
 
 @router.post("/fs/delete", dependencies=[Depends(csrf_guard)])
 def fs_delete(body: DeleteBody, user: dict = Depends(current_user)):
+    _require_family_write(user, body.path)
     abspath = _abspath(user["username"], body.path)
     args = [abspath]
     if body.recursive:
@@ -197,6 +219,7 @@ def fs_delete(body: DeleteBody, user: dict = Depends(current_user)):
 
 @router.post("/fs/upload", dependencies=[Depends(csrf_guard)])
 def fs_upload(path: str = Form(...), file: UploadFile = Form(...), user: dict = Depends(current_user)):
+    _require_family_write(user, path)
     parent = _abspath(user["username"], path)
     target = os.path.join(parent, os.path.basename(file.filename or "upload"))
     try:
