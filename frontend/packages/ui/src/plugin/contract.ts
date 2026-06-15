@@ -121,6 +121,9 @@ export interface PermissionDecl {
   default?: boolean;
   /** UI hint: require an explicit confirm before granting (e.g. power, delete). */
   dangerous?: boolean;
+  /** UI hint: the right exposes sensitive data (e.g. identifiers, serials). Purely a
+   *  label — flags information sensitivity, the counterpart to `dangerous`'s action risk. */
+  sensitive?: boolean;
 }
 
 /** A sensible grouping of related rights within one service. */
