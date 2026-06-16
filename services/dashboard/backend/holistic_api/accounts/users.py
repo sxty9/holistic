@@ -30,6 +30,21 @@ def dev_register(username: str, display_name: str, admin: bool = False) -> None:
     _DEV_USERS[username] = {"displayName": display_name or username, "isAdmin": admin}
 
 
+def _seed_dev_admins() -> None:
+    """Preview/sandbox convenience: with fake provisioning, pre-register the usernames in
+    HOLISTIC_DEV_ADMINS as admins so a preview needs NO registration — an admin just logs in
+    as themselves (fake PAM accepts any password). A no-op in production (dev_fake_provision
+    is off there), so it is safe to ship."""
+    if not settings.dev_fake_provision:
+        return
+    for name in (n.strip() for n in os.environ.get("HOLISTIC_DEV_ADMINS", "").replace(",", " ").split()):
+        if name and name not in _DEV_USERS:
+            dev_register(name, name, admin=True)
+
+
+_seed_dev_admins()
+
+
 def user_exists(username: str) -> bool:
     if settings.dev_fake_provision:
         return username in _DEV_USERS
