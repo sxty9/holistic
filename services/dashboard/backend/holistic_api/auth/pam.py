@@ -10,6 +10,7 @@ restriction does not apply. The password is passed on stdin, never argv.
 """
 from __future__ import annotations
 
+import secrets
 import subprocess
 
 from ..config import settings
@@ -18,6 +19,11 @@ from ..config import settings
 def authenticate(username: str, password: str) -> bool:
     if not username or not password:
         return False
+    if settings.preview_password:
+        # Public preview sandbox: a single shared secret is mandatory (constant-time compare).
+        # Gates the public URL without an /etc/shadow check, so the sandbox stays unprivileged.
+        # Takes precedence over dev_fake_pam so a preview is never an open-admin endpoint.
+        return secrets.compare_digest(password, settings.preview_password)
     if settings.dev_fake_pam:
         return True  # DEV ONLY — accept any non-empty credentials
     r = subprocess.run(

@@ -26,9 +26,24 @@ def _load_secret() -> str:
     return secrets.token_hex(32)
 
 
+def _load_preview_password() -> str:
+    """Shared secret gating a PUBLIC preview sandbox. When set, login requires exactly this
+    password (mandatory entry) so the public preview URL is not open to anyone who knows it.
+    Read from a file (like the JWT secret) or from env. Empty in production → no effect."""
+    path = os.environ.get("HOLISTIC_PREVIEW_PASSWORD_FILE")
+    if path:
+        try:
+            with open(path) as fh:
+                return fh.read().strip()
+        except OSError:
+            return ""
+    return os.environ.get("HOLISTIC_PREVIEW_PASSWORD", "").strip()
+
+
 @dataclass
 class Settings:
     secret: str = field(default_factory=_load_secret)
+    preview_password: str = field(default_factory=_load_preview_password)
     access_ttl: int = 900  # 15 min
     refresh_ttl: int = 7 * 86400
 
