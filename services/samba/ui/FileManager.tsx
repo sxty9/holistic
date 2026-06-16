@@ -17,6 +17,7 @@ import {
   UploadControl,
   formatBytes,
   formatDate,
+  useT,
   type BreadcrumbSegment,
   type FileActionId,
   type FileEntry,
@@ -31,10 +32,10 @@ interface Clipboard {
   items: FileEntry[];
 }
 
-function buildBreadcrumb(cwd: string, roots: FileRoot[]): BreadcrumbSegment[] {
+function buildBreadcrumb(cwd: string, roots: FileRoot[], rootLabel: (key: string, fallback: string) => string): BreadcrumbSegment[] {
   const [rootKey, ...rest] = cwd.split('/');
   const root = roots.find((r) => r.key === rootKey);
-  const segs: BreadcrumbSegment[] = [{ label: root?.label ?? rootKey, path: rootKey }];
+  const segs: BreadcrumbSegment[] = [{ label: rootLabel(rootKey, root?.label ?? rootKey), path: rootKey }];
   let acc = rootKey;
   for (const part of rest) {
     if (!part) continue;
@@ -48,6 +49,11 @@ const q = (path: string) => encodeURIComponent(path);
 const parentOf = (path: string) => path.split('/').slice(0, -1).join('/');
 
 export function FileManager({ user, api, ui }: ServiceContextProps) {
+  const t = useT();
+  // The server returns English drive labels ("My Drive", "Family"); map the known
+  // share keys to the active language, falling back to whatever the server sent.
+  const rootLabel = (key: string, fallback: string) =>
+    key === 'me' ? t('samba.driveMe') : key === 'family' ? t('samba.driveFamily') : fallback;
   const [tab, setTab] = useState<'files' | 'connect'>('files');
   const [roots, setRoots] = useState<FileRoot[]>([]);
   const [cwd, setCwd] = useState('me');
@@ -79,9 +85,9 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
     api
       .get<{ path: string; entries: FileEntry[] }>(`fs/list?path=${q(cwd)}`)
       .then((r) => setEntries(r.entries))
-      .catch((e: Error) => setError(e.message || 'Could not load this folder.'))
+      .catch((e: Error) => setError(e.message || t('samba.loadFolderError')))
       .finally(() => setLoading(false));
-  }, [api, cwd]);
+  }, [api, cwd, t]);
 
   useEffect(() => reload(), [reload]);
 
@@ -115,8 +121,8 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
     }
     if (entry.viewer === 'text' || entry.viewer === 'markdown') {
       try {
-        const t = await api.get<TextPayload>(`fs/text?path=${q(entry.path)}`);
-        setPreview({ entry, text: t });
+        const payload = await api.get<TextPayload>(`fs/text?path=${q(entry.path)}`);
+        setPreview({ entry, text: payload });
       } catch {
         setPreview({ entry, text: null });
       }
@@ -128,15 +134,15 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
   }
 
   async function confirmDelete(targets: FileEntry[]) {
-    const label = targets.length > 1 ? `${targets.length} items` : `“${targets[0].name}”`;
-    const ok = await ui.confirm({ title: `Delete ${label}?`, description: 'This can’t be undone.', danger: true, confirmLabel: 'Delete' });
+    const label = targets.length > 1 ? t('samba.items', { count: targets.length }) : `“${targets[0].name}”`;
+    const ok = await ui.confirm({ title: t('samba.deleteTitle', { label }), description: t('samba.deleteUndo'), danger: true, confirmLabel: t('common.delete') });
     if (!ok) return;
     try {
-      for (const t of targets) await api.post('fs/delete', { path: t.path, recursive: t.kind === 'dir' });
-      ui.toast({ title: 'Deleted', variant: 'success' });
+      for (const target of targets) await api.post('fs/delete', { path: target.path, recursive: target.kind === 'dir' });
+      ui.toast({ title: t('samba.deleted'), variant: 'success' });
       reload();
     } catch (e) {
-      ui.toast({ title: 'Delete failed', description: (e as Error).message, variant: 'error' });
+      ui.toast({ title: t('samba.deleteFailed'), description: (e as Error).message, variant: 'error' });
     }
   }
 
@@ -151,8 +157,8 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
       setSelection(new Set());
     } else if (action === 'delete') void confirmDelete(targets);
     else if (action === 'info') {
-      const t = targets[0];
-      ui.toast({ title: t.name, description: `${t.kind === 'dir' ? 'Folder' : formatBytes(t.size)} · ${formatDate(t.mtime)}` });
+      const target = targets[0];
+      ui.toast({ title: target.name, description: `${target.kind === 'dir' ? t('samba.folder') : formatBytes(target.size)} · ${formatDate(target.mtime)}` });
     }
   }
 
@@ -166,11 +172,11 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
         await api.post(op, { src: it.path, dstDir: cwd });
         done += 1;
       }
-      ui.toast({ title: clipboard.mode === 'move' ? 'Moved' : 'Copied', description: `${done || clipboard.items.length} item${(done || clipboard.items.length) > 1 ? 's' : ''}`, variant: 'success' });
+      ui.toast({ title: clipboard.mode === 'move' ? t('samba.moved') : t('samba.copied'), description: t('samba.items', { count: done || clipboard.items.length }), variant: 'success' });
       setClipboard(null);
       reload();
     } catch (e) {
-      ui.toast({ title: clipboard.mode === 'move' ? 'Move failed' : 'Copy failed', description: (e as Error).message, variant: 'error' });
+      ui.toast({ title: clipboard.mode === 'move' ? t('samba.moveFailed') : t('samba.copyFailed'), description: (e as Error).message, variant: 'error' });
     }
   }
 
@@ -178,20 +184,20 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
     if (!renaming) return;
     try {
       await api.post('fs/rename', { path: renaming.path, newName: name });
-      ui.toast({ title: 'Renamed', variant: 'success' });
+      ui.toast({ title: t('samba.renamed'), variant: 'success' });
       reload();
     } catch (e) {
-      ui.toast({ title: 'Rename failed', description: (e as Error).message, variant: 'error' });
+      ui.toast({ title: t('samba.renameFailed'), description: (e as Error).message, variant: 'error' });
     }
   }
 
   async function doMkdir(name: string) {
     try {
       await api.post('fs/mkdir', { path: cwd, name });
-      ui.toast({ title: 'Folder created', variant: 'success' });
+      ui.toast({ title: t('samba.folderCreated'), variant: 'success' });
       reload();
     } catch (e) {
-      ui.toast({ title: 'Could not create folder', description: (e as Error).message, variant: 'error' });
+      ui.toast({ title: t('samba.folderCreateFailed'), description: (e as Error).message, variant: 'error' });
     }
   }
 
@@ -202,19 +208,19 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
         fd.append('path', cwd);
         fd.append('file', f);
         const res = await api.raw('fs/upload', { method: 'POST', body: fd });
-        if (!res.ok) throw new Error(`Upload of ${f.name} failed`);
+        if (!res.ok) throw new Error(t('samba.uploadOneFailed', { name: f.name }));
       }
-      ui.toast({ title: `Uploaded ${files.length} file${files.length > 1 ? 's' : ''}`, variant: 'success' });
+      ui.toast({ title: t('samba.uploaded', { count: files.length }), variant: 'success' });
       reload();
     } catch (e) {
-      ui.toast({ title: 'Upload failed', description: (e as Error).message, variant: 'error' });
+      ui.toast({ title: t('samba.uploadFailed'), description: (e as Error).message, variant: 'error' });
     }
   }
 
   const clipboardSummary = clipboard
     ? clipboard.items.length === 1
       ? clipboard.items[0].name
-      : `${clipboard.items.length} items`
+      : t('samba.items', { count: clipboard.items.length })
     : '';
 
   return (
@@ -224,14 +230,14 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
           value={tab}
           onChange={setTab}
           options={[
-            { value: 'files', label: 'Files' },
-            { value: 'connect', label: 'Connect' },
+            { value: 'files', label: t('samba.tabFiles') },
+            { value: 'connect', label: t('samba.tabConnect') },
           ]}
         />
 
         {tab === 'files' ? (
           <Stack gap={3}>
-            <Breadcrumb segments={buildBreadcrumb(cwd, roots)} onNavigate={navigate} />
+            <Breadcrumb segments={buildBreadcrumb(cwd, roots, rootLabel)} onNavigate={navigate} />
             <FileToolbar
               view={view}
               onViewChange={setView}
@@ -255,11 +261,11 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
                 className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2"
               >
                 <Text variant="footnote" color="secondary">
-                  {clipboard.mode === 'move' ? 'Moving' : 'Copying'} <Text as="span" weight="semibold" color="primary">{clipboardSummary}</Text> — go to a folder, then paste.
+                  {clipboard.mode === 'move' ? t('samba.clipboardMove', { what: clipboardSummary }) : t('samba.clipboardCopy', { what: clipboardSummary })}
                 </Text>
                 <Stack direction="row" gap={2}>
                   <Button variant="ghost" size="sm" onClick={() => setClipboard(null)}>
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     variant="primary"
@@ -267,7 +273,7 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
                     iconLeft={clipboard.mode === 'move' ? <MoveIcon className="h-4 w-4" /> : <CopyIcon className="h-4 w-4" />}
                     onClick={paste}
                   >
-                    {clipboard.mode === 'move' ? 'Move here' : 'Copy here'}
+                    {clipboard.mode === 'move' ? t('samba.moveHere') : t('samba.copyHere')}
                   </Button>
                 </Stack>
               </Stack>

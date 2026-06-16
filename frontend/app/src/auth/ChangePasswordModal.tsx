@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Button, Field, Modal, PasswordInput, Stack, Text, toast } from '@holistic/ui';
+import { Button, Field, Modal, PasswordInput, Stack, Text, toast, useT } from '@holistic/ui';
 import { ApiError, authApi } from '../api/holisticClient';
 
 export function ChangePasswordModal({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const t = useT();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -20,17 +21,17 @@ export function ChangePasswordModal({ open, onOpenChange }: { open: boolean; onO
 
   async function submit() {
     if (next !== confirm) {
-      setError('New passwords do not match.');
+      setError(t('auth.errNewPwMismatch'));
       return;
     }
     setBusy(true);
     setError(null);
     try {
       await authApi.changePassword(current, next);
-      toast({ title: 'Password updated', description: 'Your Linux and Samba passwords are in sync.', variant: 'success' });
+      toast({ title: t('auth.pwUpdatedTitle'), description: t('auth.pwUpdatedDesc'), variant: 'success' });
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 401 ? 'Your current password is wrong.' : 'Could not update the password.');
+      setError(err instanceof ApiError && err.status === 401 ? t('auth.errCurrentPw') : t('auth.errUpdatePw'));
     } finally {
       setBusy(false);
     }
@@ -40,28 +41,28 @@ export function ChangePasswordModal({ open, onOpenChange }: { open: boolean; onO
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title="Change password"
-      description="Updates both your login and file-sharing password."
+      title={t('shell.changePassword')}
+      description={t('auth.pwModalDesc')}
       size="sm"
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button variant="primary" onClick={submit} loading={busy} disabled={!current || !next || !confirm}>
-            Update
+            {t('common.update')}
           </Button>
         </>
       }
     >
       <Stack gap={4}>
-        <Field label="Current password">
+        <Field label={t('auth.currentPassword')}>
           <PasswordInput value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
         </Field>
-        <Field label="New password">
+        <Field label={t('auth.newPassword')}>
           <PasswordInput value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" />
         </Field>
-        <Field label="Confirm new password">
+        <Field label={t('auth.confirmNewPassword')}>
           <PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
         </Field>
         {error && (

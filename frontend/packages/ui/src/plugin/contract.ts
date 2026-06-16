@@ -3,9 +3,15 @@ import type { ComponentType, ReactNode } from 'react';
 /** Identity of the logged-in Linux/Samba user, provided by the shell. */
 export interface HolisticUser {
   username: string; // Linux account name (== Samba user)
-  displayName: string; // human label for the top bar
+  displayName: string; // human label for the top bar (nickname, else OS name)
   groups: string[]; // e.g. ["family","smbusers"]
   isAdmin: boolean; // member of the admin group (Linux sudo — single source of truth)
+  // App-managed profile fields (editable via the account menu). Optional so older
+  // payloads and services that don't care keep working unchanged.
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  avatarUrl?: string | null; // profile photo, or null/undefined for initials
 }
 
 /** A service-scoped, already-authenticated API client. Base URL is
@@ -109,11 +115,20 @@ export interface PermissionDecl {
   label: string;
   /** Optional longer explanation of what the right unlocks. */
   description?: string;
-  /** Linux group backing this right — the authority for storage AND enforcement.
-   *  MUST be `hp_`-prefixed and match /^hp_[a-z0-9][a-z0-9_-]{0,27}$/ (<=31 chars).
-   *  The mandatory prefix is a security boundary: privleg only ever toggles hp_*
-   *  groups, so it can never be tricked into touching sudo/family/smbusers. */
-  group: string;
+  /** Permission kind. 'group' (default): a fine-grained right backed 1:1 by a Linux
+   *  group. 'shell': an EXCEPTION to the group model — the right IS the user's Linux
+   *  login shell (the single source of truth for "shell-entitled"), which privleg reads
+   *  via getent and writes via usermod. A 'shell' permission has no backing group. */
+  type?: 'group' | 'shell';
+  /** Linux group backing this right — the authority for storage AND enforcement. Required
+   *  for 'group' permissions, omitted for 'shell'. MUST be `hp_`-prefixed and match
+   *  /^hp_[a-z0-9][a-z0-9_-]{0,27}$/ (<=31 chars). The mandatory prefix is a security
+   *  boundary: privleg only ever toggles hp_* groups, so it can never be tricked into
+   *  touching sudo/family/smbusers. */
+  group?: string;
+  /** For a 'shell' permission: the login shell set when the right is granted (default
+   *  /bin/bash). Revoking sets the user's shell to nologin. */
+  shell?: string;
   /** Baseline membership for non-admins (enforcement is the same either way):
    *  - false / omitted: the group starts empty; privleg GRANTS the right per user.
    *  - true: provisioning auto-adds every user to the group, so the right is on by

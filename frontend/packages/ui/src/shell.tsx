@@ -3,7 +3,8 @@ import { cn } from './lib/cn';
 import { Avatar } from './primitives';
 import { IconButton } from './controls';
 import { DropdownMenu, type MenuItem } from './overlay/menu';
-import { MoonIcon, SignOutIcon, SunIcon, UserIcon } from './icons';
+import { GlobeIcon, KeyIcon, MoonIcon, SignOutIcon, SunIcon, UserIcon } from './icons';
+import { LOCALES, useLocale, useT } from './i18n';
 import type { HolisticUser } from './plugin/contract';
 
 // --- theme ---------------------------------------------------------------
@@ -101,14 +102,24 @@ export interface TopBarProps {
   actions?: ReactNode;
   user: HolisticUser;
   onSignOut: () => void;
+  onEditProfile?: () => void;
   onChangePassword?: () => void;
 }
-export function TopBar({ title, actions, user, onSignOut, onChangePassword }: TopBarProps) {
+export function TopBar({ title, actions, user, onSignOut, onEditProfile, onChangePassword }: TopBarProps) {
   const [theme, toggleTheme] = useTheme();
+  const [locale, setLocale] = useLocale();
+  const t = useT();
   const items: MenuItem[] = [
-    { id: 'theme', label: theme === 'dark' ? 'Light appearance' : 'Dark appearance', icon: theme === 'dark' ? <SunIcon /> : <MoonIcon />, onSelect: toggleTheme },
-    ...(onChangePassword ? [{ id: 'pw', label: 'Change password', icon: <UserIcon />, onSelect: onChangePassword }] : []),
-    { id: 'signout', label: 'Sign out', icon: <SignOutIcon />, danger: true, separatorBefore: true, onSelect: onSignOut },
+    { id: 'theme', label: t(theme === 'dark' ? 'shell.lightAppearance' : 'shell.darkAppearance'), icon: theme === 'dark' ? <SunIcon /> : <MoonIcon />, onSelect: toggleTheme },
+    {
+      id: 'language',
+      label: t('shell.language'),
+      icon: <GlobeIcon />,
+      submenu: LOCALES.map((l) => ({ id: `lang-${l.code}`, label: l.native, checked: l.code === locale, onSelect: () => setLocale(l.code) })),
+    },
+    ...(onEditProfile ? [{ id: 'profile', label: t('shell.profile'), icon: <UserIcon />, separatorBefore: true, onSelect: onEditProfile }] : []),
+    ...(onChangePassword ? [{ id: 'pw', label: t('shell.changePassword'), icon: <KeyIcon />, separatorBefore: !onEditProfile, onSelect: onChangePassword }] : []),
+    { id: 'signout', label: t('shell.signOut'), icon: <SignOutIcon />, danger: true, separatorBefore: true, onSelect: onSignOut },
   ];
   return (
     <header className="h-14 shrink-0 flex items-center justify-between gap-4 px-5 border-b border-separator bg-material-thin [backdrop-filter:var(--material-blur-thin)]">
@@ -118,8 +129,8 @@ export function TopBar({ title, actions, user, onSignOut, onChangePassword }: To
         <DropdownMenu
           align="end"
           trigger={
-            <IconButton label="Account">
-              <Avatar name={user.displayName || user.username} size={28} />
+            <IconButton label={t('shell.account')}>
+              <Avatar name={user.displayName || user.username} src={user.avatarUrl} size={28} />
             </IconButton>
           }
           items={items}

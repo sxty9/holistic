@@ -2,6 +2,9 @@
 export * from './plugin/contract';
 export { cn } from './lib/cn';
 
+// i18n (locales, provider, hooks, message registry)
+export * from './i18n';
+
 // Icons
 export * from './icons';
 
@@ -63,6 +66,10 @@ export { AuthScene, AuthCard, HolisticMark } from './auth';
 
 // Code
 export { CodeBlock } from './code';
+
+// Terminal (interactive shell over a WebSocket; owns the xterm.js dependency)
+export { Terminal } from './terminal';
+export type { TerminalProps } from './terminal';
 
 // Metrics & data visualization
 export { LineChart, Sparkline, Legend, StreamGraph } from './charts';

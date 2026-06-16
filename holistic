@@ -82,6 +82,7 @@ system_prep() {
     install -d -o holistic -g holistic -m 0755 /etc/holistic
     install -d -o holistic -g holistic -m 0755 /etc/holistic/permissions.d  # service rights manifests (drop-in)
     install -d -o holistic -g holistic -m 2750 /var/lib/holistic   # setgid: invites/secrets stay group-readable
+    install -d -o holistic -g holistic -m 0700 /var/lib/holistic/profiles  # app-managed profile data + avatars
 
     # Storage layout
     mkdir -p /srv/storage/users

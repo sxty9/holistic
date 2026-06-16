@@ -173,14 +173,14 @@ export function ScrollArea({ className, children, ...rest }: HTMLAttributes<HTML
   return <div className={cn('overflow-auto', className)} {...rest}>{children}</div>;
 }
 
-export function Avatar({ name, size = 32, className }: { name: string; size?: number; className?: string }) {
+export function Avatar({ name, src, size = 32, className }: { name: string; src?: string | null; size?: number; className?: string }) {
   const initials = name.trim().slice(0, 2).toUpperCase();
   return (
     <div
-      className={cn('inline-flex items-center justify-center rounded-full bg-accent/15 text-accent font-semibold select-none', className)}
+      className={cn('inline-flex items-center justify-center overflow-hidden rounded-full bg-accent/15 text-accent font-semibold select-none', className)}
       style={{ width: size, height: size, fontSize: size * 0.4 }}
     >
-      {initials}
+      {src ? <img src={src} alt={name} className="h-full w-full object-cover" draggable={false} /> : initials}
     </div>
   );
 }

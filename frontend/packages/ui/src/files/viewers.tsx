@@ -3,6 +3,7 @@ import { cn } from '../lib/cn';
 import { Button, IconButton } from '../controls';
 import { EmptyState } from '../primitives';
 import { DownloadIcon, XIcon } from '../icons';
+import { useT } from '../i18n';
 import type { FileEntry } from '../plugin/contract';
 import { FileEntryIcon } from './parts';
 
@@ -23,6 +24,7 @@ export interface FilePreviewProps {
 }
 
 function Body({ entry, rawUrl, text, onDownload }: { entry: FileEntry; rawUrl?: string; text?: TextPayload | null; onDownload: (e: FileEntry) => void }) {
+  const t = useT();
   const v = entry.viewer;
   if (v === 'image' && rawUrl) {
     return (
@@ -52,7 +54,7 @@ function Body({ entry, rawUrl, text, onDownload }: { entry: FileEntry; rawUrl?: 
   if ((v === 'text' || v === 'markdown') && text) {
     return (
       <div className="max-h-[70vh] overflow-auto bg-surface">
-        {text.truncated && <div className="px-4 py-2 text-caption text-warning border-b border-separator">Showing the beginning of a large file.</div>}
+        {text.truncated && <div className="px-4 py-2 text-caption text-warning border-b border-separator">{t('files.largeFileHead')}</div>}
         <pre className="p-4 font-mono text-footnote text-text-primary whitespace-pre-wrap break-words">{text.content}</pre>
       </div>
     );
@@ -60,11 +62,11 @@ function Body({ entry, rawUrl, text, onDownload }: { entry: FileEntry; rawUrl?: 
   return (
     <EmptyState
       icon={<FileEntryIcon entry={entry} className="h-10 w-10" />}
-      title="Preview not available"
-      description="This file type can’t be previewed here."
+      title={t('files.previewUnavailable')}
+      description={t('files.previewUnavailableHint')}
       action={
         <Button variant="primary" size="sm" iconLeft={<DownloadIcon className="h-4 w-4" />} onClick={() => onDownload(entry)}>
-          Download
+          {t('common.download')}
         </Button>
       }
     />
@@ -73,6 +75,7 @@ function Body({ entry, rawUrl, text, onDownload }: { entry: FileEntry; rawUrl?: 
 
 /** Standardized viewer host — the only sanctioned way to render file content. */
 export function FilePreview({ open, entry, rawUrl, text, onOpenChange, onDownload }: FilePreviewProps) {
+  const t = useT();
   return (
     <Dialog.Root open={open && !!entry} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -89,12 +92,12 @@ export function FilePreview({ open, entry, rawUrl, text, onOpenChange, onDownloa
             <Dialog.Title className="text-subhead font-semibold text-text-primary truncate">{entry?.name}</Dialog.Title>
             <div className="flex items-center gap-1">
               {entry && (
-                <IconButton label="Download" size="sm" onClick={() => onDownload(entry)}>
+                <IconButton label={t('common.download')} size="sm" onClick={() => onDownload(entry)}>
                   <DownloadIcon className="h-4 w-4" />
                 </IconButton>
               )}
               <Dialog.Close asChild>
-                <IconButton label="Close" size="sm">
+                <IconButton label={t('common.close')} size="sm">
                   <XIcon className="h-4 w-4" />
                 </IconButton>
               </Dialog.Close>

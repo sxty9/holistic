@@ -46,9 +46,11 @@ export const ListIcon = icon(<><path d="M8 6h12M8 12h12M8 18h12" /><circle cx="4
 export const SearchIcon = icon(<><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>);
 export const XIcon = icon(<path d="M6 6l12 12M18 6 6 18" />);
 export const UserIcon = icon(<><circle cx="12" cy="8" r="4" /><path d="M4 20a8 8 0 0 1 16 0" /></>);
+export const KeyIcon = icon(<><circle cx="8" cy="15" r="4" /><path d="m10.8 12.2 8.2-8.2" /><path d="m16 7 2.5 2.5" /><path d="m13.5 9.5 2.5 2.5" /></>);
 export const SignOutIcon = icon(<><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="M10 12H3" /><path d="m6 8-4 4 4 4" /></>);
 export const SunIcon = icon(<><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" /></>);
 export const MoonIcon = icon(<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10Z" />);
+export const GlobeIcon = icon(<><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3c2.5 2.5 3.8 5.7 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.7-3.8-9S9.5 5.5 12 3Z" /></>);
 export const EyeIcon = icon(<><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></>);
 export const EyeOffIcon = icon(<><path d="m4 4 16 16" /><path d="M9.5 9.5a3 3 0 0 0 4 4" /><path d="M6.7 6.7C4 8.3 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 4.3-1M14 5.2A9.6 9.6 0 0 0 12 5C5.5 5 2 12 2 12" /></>);
 export const MoveIcon = icon(<><path d="M12 3v18M3 12h18" /><path d="m9 6 3-3 3 3M9 18l3 3 3-3M6 9 3 12l3 3M18 9l3 3-3 3" /></>);
@@ -75,3 +77,6 @@ export const SsdIcon = icon(<><rect x="3" y="5" width="18" height="14" rx="2" />
 export const MotherboardIcon = icon(<><rect x="3" y="3" width="18" height="18" rx="2" /><rect x="6.5" y="6.5" width="6" height="6" rx="1" /><path d="M15 7h3M15 10h3M7 16h10" /><circle cx="16" cy="16" r="1.1" fill="currentColor" stroke="none" /><circle cx="19" cy="16" r="1.1" fill="currentColor" stroke="none" /></>);
 export const FanIcon = icon(<><circle cx="12" cy="12" r="2" /><path d="M12 10c0-3 .5-6-1-6S8.5 7 12 10ZM14 12c3 0 6-.5 6 1s-3 1.5-6-1ZM12 14c0 3-.5 6 1 6s1.5-3-1-6ZM10 12c-3 0-6 .5-6-1s3-1.5 6 1Z" /></>);
 export const EthernetIcon = icon(<><rect x="3" y="8" width="18" height="11" rx="1.5" /><path d="M7 19v-3M10 19v-3M14 19v-3M17 19v-3M9 8V5h6v3" /></>);
+
+// Terminal / remote shell.
+export const TerminalIcon = icon(<><rect x="3" y="4" width="18" height="16" rx="2" /><path d="m7 9 3 3-3 3" /><path d="M13 15h4" /></>);

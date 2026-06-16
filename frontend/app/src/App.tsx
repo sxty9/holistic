@@ -13,6 +13,7 @@ import {
   TopBar,
   confirm,
   toast,
+  useT,
   type HolisticUser,
   type ServiceContextProps,
   type ServicePlugin,
@@ -23,6 +24,15 @@ import { LoginScreen } from './auth/LoginScreen';
 import { RegisterScreen } from './auth/RegisterScreen';
 import { ChangePasswordModal } from './auth/ChangePasswordModal';
 
+function ServiceErrorFallback() {
+  const t = useT();
+  return (
+    <ContentRegion>
+      <EmptyState title={t('app.serviceErrorTitle')} description={t('app.serviceErrorDesc')} />
+    </ContentRegion>
+  );
+}
+
 class ServiceBoundary extends Component<{ children: ReactNode }, { error: boolean }> {
   state = { error: false };
   static getDerivedStateFromError() {
@@ -30,11 +40,7 @@ class ServiceBoundary extends Component<{ children: ReactNode }, { error: boolea
   }
   render() {
     if (this.state.error) {
-      return (
-        <ContentRegion>
-          <EmptyState title="Something went wrong" description="This service ran into an error. Try switching away and back." />
-        </ContentRegion>
-      );
+      return <ServiceErrorFallback />;
     }
     return this.props.children;
   }
@@ -54,11 +60,15 @@ function Brand() {
 function Shell({ user, onSignOut }: { user: HolisticUser; onSignOut: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const t = useT();
   const [title, setTitle] = useState<string | null>(null);
   const [pwOpen, setPwOpen] = useState(false);
 
   const isVisible = (s: ServicePlugin) => s.visible?.(user) ?? true;
   const visibleServices = SERVICES.filter(isVisible);
+  // A service may register a localized name under `service.<id>`; otherwise its
+  // static displayName (the canonical English label) stands in.
+  const serviceLabel = (s: ServicePlugin) => (t.has(`service.${s.id}`) ? t(`service.${s.id}`) : s.displayName);
 
   const match = location.pathname.match(/^\/app\/([^/]+)(?:\/(.*))?/);
   const requestedId = match?.[1];
@@ -92,15 +102,15 @@ function Shell({ user, onSignOut }: { user: HolisticUser; onSignOut: () => void 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active?.id, subPath, user]);
 
-  const items = visibleServices.map((s) => ({ id: s.id, label: s.displayName, icon: s.icon }));
+  const items = visibleServices.map((s) => ({ id: s.id, label: serviceLabel(s), icon: s.icon }));
 
   return (
     <AppShell
       sidebar={<Sidebar header={<Brand />} items={items} activeId={serviceId} onSelect={(id) => navigate(`/app/${id}`)} />}
-      topBar={<TopBar title={title ?? active?.displayName} user={user} onSignOut={onSignOut} onChangePassword={() => setPwOpen(true)} />}
+      topBar={<TopBar title={title ?? (active ? serviceLabel(active) : undefined)} user={user} onSignOut={onSignOut} onChangePassword={() => setPwOpen(true)} />}
     >
       <ServiceBoundary key={serviceId}>
-        {active && ctx ? <active.Component {...ctx} /> : <ContentRegion><EmptyState title="No services installed" description="Add a service and rebuild the dashboard." /></ContentRegion>}
+        {active && ctx ? <active.Component {...ctx} /> : <ContentRegion><EmptyState title={t('app.noServicesTitle')} description={t('app.noServicesDesc')} /></ContentRegion>}
       </ServiceBoundary>
       <ChangePasswordModal open={pwOpen} onOpenChange={setPwOpen} />
     </AppShell>

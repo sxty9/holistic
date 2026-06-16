@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal } from '../overlay/modal';
 import { Button, Field, Input } from '../controls';
 import { Stack, Text } from '../primitives';
+import { useT } from '../i18n';
 import type { FileRoot } from '../plugin/contract';
 
 function PromptModal({
@@ -21,6 +22,7 @@ function PromptModal({
   onOpenChange: (o: boolean) => void;
   onSubmit: (value: string) => void;
 }) {
+  const t = useT();
   const [value, setValue] = useState(initial ?? '');
   useEffect(() => {
     if (open) setValue(initial ?? '');
@@ -41,7 +43,7 @@ function PromptModal({
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button variant="primary" onClick={submit} disabled={!value.trim()}>
             {submitLabel}
@@ -64,11 +66,13 @@ function PromptModal({
 }
 
 export function NewFolderDialog({ open, onOpenChange, onSubmit }: { open: boolean; onOpenChange: (o: boolean) => void; onSubmit: (name: string) => void }) {
-  return <PromptModal open={open} onOpenChange={onOpenChange} onSubmit={onSubmit} title="New Folder" label="Folder name" submitLabel="Create" />;
+  const t = useT();
+  return <PromptModal open={open} onOpenChange={onOpenChange} onSubmit={onSubmit} title={t('files.newFolder')} label={t('files.folderName')} submitLabel={t('common.create')} />;
 }
 
 export function RenameDialog({ open, initialName, onOpenChange, onSubmit }: { open: boolean; initialName: string; onOpenChange: (o: boolean) => void; onSubmit: (name: string) => void }) {
-  return <PromptModal open={open} onOpenChange={onOpenChange} onSubmit={onSubmit} title="Rename" label="New name" initial={initialName} submitLabel="Rename" />;
+  const t = useT();
+  return <PromptModal open={open} onOpenChange={onOpenChange} onSubmit={onSubmit} title={t('common.rename')} label={t('files.newName')} initial={initialName} submitLabel={t('common.rename')} />;
 }
 
 /** Minimal destination picker: quick root chips + an editable virtual path. */
@@ -85,6 +89,7 @@ export function MoveDialog({
   onOpenChange: (o: boolean) => void;
   onSubmit: (dstDir: string) => void;
 }) {
+  const t = useT();
   const [dest, setDest] = useState(initialDir ?? roots[0]?.key ?? 'me');
   useEffect(() => {
     if (open) setDest(initialDir ?? roots[0]?.key ?? 'me');
@@ -93,12 +98,12 @@ export function MoveDialog({
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title="Move to…"
+      title={t('files.moveTitle')}
       size="sm"
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             variant="primary"
@@ -110,7 +115,7 @@ export function MoveDialog({
               }
             }}
           >
-            Move
+            {t('common.move')}
           </Button>
         </>
       }
@@ -123,11 +128,11 @@ export function MoveDialog({
             </Button>
           ))}
         </Stack>
-        <Field label="Destination folder" hint="e.g. family/Movies — the folder must already exist">
+        <Field label={t('files.destFolder')} hint={t('files.destHint')}>
           <Input value={dest} onChange={(e) => setDest(e.target.value)} />
         </Field>
         <Text variant="caption" color="tertiary">
-          Files keep their name; a folder with the same name must not already exist there.
+          {t('files.moveNote')}
         </Text>
       </Stack>
     </Modal>

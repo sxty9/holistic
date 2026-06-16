@@ -21,6 +21,11 @@ venv/
 
 # Local tooling
 .claude/
+.sxgate/
+
+# Packaging / build artifacts (regenerable)
+*.egg-info/
+services/dashboard/build/
 
 # OS / editor junk
 .DS_Store

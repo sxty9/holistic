@@ -46,6 +46,15 @@ export const authApi = {
   refresh: () => request<HolisticUser>('/api/auth/refresh', { method: 'POST' }),
   changePassword: (current_password: string, new_password: string) =>
     request<void>('/api/account/password', { method: 'POST', body: { current_password, new_password } }),
+  getProfile: () => request<HolisticUser & { nickname: string }>('/api/account/profile'),
+  updateProfile: (data: { firstName: string; lastName: string; email: string; nickname: string }) =>
+    request<HolisticUser>('/api/account/profile', { method: 'PUT', body: data }),
+  uploadAvatar: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<HolisticUser>('/api/account/avatar', { method: 'POST', body: form });
+  },
+  deleteAvatar: () => request<HolisticUser>('/api/account/avatar', { method: 'DELETE' }),
 };
 
 /** A service-scoped client (base /api/services/<id>/) handed to each service Component. */

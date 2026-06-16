@@ -23,7 +23,7 @@ holistic_user_exists() {
 # host without privleg keeps prior behaviour (the right is on until an admin revokes it).
 # Best-effort + idempotent; no-op if no service declares default-on rights.
 holistic_user_grant_defaults() {
-    local name="$1" perms_tool g
+    local name="$1" perms_tool g sh cur
     perms_tool="$(dirname "${BASH_SOURCE[0]}")/holistic-perms.py"
     [[ -f "$perms_tool" ]] || return 0
     while read -r g; do
@@ -31,6 +31,16 @@ holistic_user_grant_defaults() {
         groupadd -f "$g" 2>/dev/null || true
         gpasswd -a "$name" "$g" >/dev/null 2>&1 || true
     done < <(python3 "$perms_tool" default-groups 2>/dev/null || true)
+    # Default-on shell access (e.g. remshel): set the default login shell, but only if the
+    # user currently has a disabling shell (nologin/false) — never clobber a real one. The
+    # login shell is the single source of truth, the exception to the group-based model.
+    cur="$(getent passwd "$name" | cut -d: -f7)"
+    case "$cur" in
+        */nologin | */false | "")
+            sh="$(python3 "$perms_tool" default-shells 2>/dev/null | head -n1 || true)"
+            [[ -n "$sh" && -x "$sh" ]] && usermod -s "$sh" "$name" 2>/dev/null || true
+            ;;
+    esac
 }
 
 # Create the Linux account + storage + group membership. $2 = display name (GECOS, optional).

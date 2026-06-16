@@ -106,17 +106,28 @@ def _validate(manifests: list[dict]) -> list[str]:
                     pid = pid if isinstance(pid, str) else "?"
                 if not isinstance(p.get("label"), str) or not p.get("label"):
                     errors.append(f"{f}: permission {svc}:{cid}:{pid} needs a non-empty 'label'")
-                grp = p.get("group")
-                if not isinstance(grp, str) or not GROUP_RE.match(grp or ""):
-                    errors.append(
-                        f"{f}: permission {svc}:{cid}:{pid} 'group' must match {GROUP_RE.pattern}, got {grp!r}"
-                    )
-                elif grp in PROTECTED_GROUPS:
-                    errors.append(f"{f}: permission {svc}:{cid}:{pid} may not back the protected group {grp!r}")
-                elif grp in seen_groups:
-                    errors.append(f"{f}: group {grp!r} already backs {seen_groups[grp]} — groups must be unique")
+                ptype = p.get("type", "group")
+                if ptype not in ("group", "shell"):
+                    errors.append(f"{f}: permission {svc}:{cid}:{pid} has unknown type {ptype!r}")
+                if ptype == "shell":
+                    # A 'shell' permission is the EXCEPTION to the group model: the right IS
+                    # the user's login shell (single source of truth), so it has no backing
+                    # group. An optional 'shell' field names the login shell set when granted.
+                    sh = p.get("shell")
+                    if sh is not None and (not isinstance(sh, str) or not sh.startswith("/")):
+                        errors.append(f"{f}: permission {svc}:{cid}:{pid} 'shell' must be an absolute path, got {sh!r}")
                 else:
-                    seen_groups[grp] = f"{svc}:{cid}:{pid}"
+                    grp = p.get("group")
+                    if not isinstance(grp, str) or not GROUP_RE.match(grp or ""):
+                        errors.append(
+                            f"{f}: permission {svc}:{cid}:{pid} 'group' must match {GROUP_RE.pattern}, got {grp!r}"
+                        )
+                    elif grp in PROTECTED_GROUPS:
+                        errors.append(f"{f}: permission {svc}:{cid}:{pid} may not back the protected group {grp!r}")
+                    elif grp in seen_groups:
+                        errors.append(f"{f}: group {grp!r} already backs {seen_groups[grp]} — groups must be unique")
+                    else:
+                        seen_groups[grp] = f"{svc}:{cid}:{pid}"
                 for hint in ("default", "dangerous"):
                     if hint in p and not isinstance(p[hint], bool):
                         errors.append(f"{f}: permission {svc}:{cid}:{pid} '{hint}' must be a bool")
@@ -147,9 +158,20 @@ def _default_groups(manifests: list[dict]) -> list[str]:
     """Groups for `default: true` rights — provisioning auto-grants these to every user,
     so behaviour without privleg is unchanged (the right is on until an admin revokes it)."""
     out = [p["group"] for p in _iter_perms(manifests)
-           if isinstance(p.get("group"), str) and p.get("default") is True]
+           if p.get("type", "group") != "shell"
+           and isinstance(p.get("group"), str) and p.get("default") is True]
     seen: set[str] = set()
     return [g for g in out if not (g in seen or seen.add(g))]
+
+
+def _default_shells(manifests: list[dict]) -> list[str]:
+    """Login shells for `default: true` shell permissions. Provisioning sets the (first)
+    one as the default login shell for managed users, so shell access is on by default.
+    The login shell is the single source of truth, the exception to the group model."""
+    out = [(p.get("shell") or "/bin/bash") for p in _iter_perms(manifests)
+           if p.get("type") == "shell" and p.get("default") is True]
+    seen: set[str] = set()
+    return [s for s in out if not (s in seen or seen.add(s))]
 
 
 def cmd_validate(args) -> int:
@@ -179,7 +201,8 @@ def cmd_list(args) -> int:
                 flags = "".join(
                     t for t, on in (("!", p.get("dangerous")), ("*", p.get("default"))) if on
                 )
-                print(f"    - {p.get('label')}  ({p.get('group')}){(' ' + flags) if flags else ''}")
+                backing = f"shell:{p.get('shell', '/bin/bash')}" if p.get("type") == "shell" else p.get("group")
+                print(f"    - {p.get('label')}  ({backing}){(' ' + flags) if flags else ''}")
     return 0
 
 
@@ -197,11 +220,22 @@ def cmd_default_groups(args) -> int:
     return 0
 
 
+def cmd_default_shells(args) -> int:
+    manifests, _ = _load_all(args.dir)
+    for s in _default_shells(manifests):
+        print(s)
+    return 0
+
+
 def cmd_grant_defaults(args) -> int:
-    """Add every holistic user (smbusers member) to every `default: true` rights group.
-    Idempotent reconcile so existing users keep prior behaviour after a service adopts a
-    default-on right. Root-only (changes group membership)."""
+    """Reconcile every holistic user (smbusers member) to the default-on rights:
+      - add them to every `default: true` rights group;
+      - set their login shell to the default shell (for `default: true` shell perms) IF
+        they currently have a disabling shell (nologin/false) — an existing real shell is
+        kept, so this never clobbers a deliberate choice.
+    Idempotent. Root-only (changes group membership + login shells)."""
     import grp
+    import pwd
     if os.geteuid() != 0:
         print("[perms] ERROR: grant-defaults must run as root", file=sys.stderr)
         return 2
@@ -211,7 +245,8 @@ def cmd_grant_defaults(args) -> int:
             print(f"[perms] ERROR: {e}", file=sys.stderr)
         return 1
     groups = _default_groups(manifests)
-    if not groups:
+    shells = _default_shells(manifests)
+    if not groups and not shells:
         return 0
     try:
         members = sorted(set(grp.getgrnam("smbusers").gr_mem))
@@ -222,7 +257,24 @@ def cmd_grant_defaults(args) -> int:
         for user in members:
             subprocess.run(["gpasswd", "-a", user, g], check=True,
                            stdout=subprocess.DEVNULL)
-    print(f"[perms] granted {len(groups)} default right(s) to {len(members)} user(s)")
+    if groups:
+        print(f"[perms] granted {len(groups)} default right(s) to {len(members)} user(s)")
+    if shells:
+        target_shell = shells[0]  # one shell permission in practice
+        if not os.path.exists(target_shell):
+            print(f"[perms] WARN: default shell {target_shell} missing; skipped", file=sys.stderr)
+        else:
+            changed = 0
+            for user in members:
+                try:
+                    cur = pwd.getpwnam(user).pw_shell
+                except KeyError:
+                    continue
+                if cur and os.path.basename(cur) not in ("nologin", "false"):
+                    continue  # keep an existing real login shell
+                subprocess.run(["usermod", "-s", target_shell, user], check=True)
+                changed += 1
+            print(f"[perms] set default shell ({target_shell}) for {changed} user(s)")
     return 0
 
 
@@ -258,6 +310,7 @@ def main() -> int:
 
     for name, fn in (("validate", cmd_validate), ("list", cmd_list),
                      ("groups", cmd_groups), ("default-groups", cmd_default_groups),
+                     ("default-shells", cmd_default_shells),
                      ("ensure-groups", cmd_ensure_groups), ("grant-defaults", cmd_grant_defaults)):
         sp = sub.add_parser(name)
         sp.add_argument("dir", nargs="?", default=PERMS_DIR)

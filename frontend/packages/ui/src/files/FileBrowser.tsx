@@ -3,6 +3,7 @@ import { cn } from '../lib/cn';
 import { Grid, Spinner, EmptyState } from '../primitives';
 import { ContextMenu, type MenuItem } from '../overlay/menu';
 import { CopyIcon, DownloadIcon, FolderIcon, InfoIcon, MoveIcon, PencilIcon, TrashIcon } from '../icons';
+import { useT } from '../i18n';
 import type { FileEntry } from '../plugin/contract';
 import { FileEntryIcon } from './parts';
 
@@ -57,6 +58,7 @@ function ColumnResizeHandle({ onPointerDown }: { onPointerDown: (e: ReactPointer
 }
 
 export function FileBrowser({ entries, view, selection, loading, error, cutPaths, onOpen, onSelectionChange, onAction, emptyAction }: FileBrowserProps) {
+  const t = useT();
   // Index of the last clicked item — the anchor for shift-range selection.
   const anchor = useRef<number | null>(null);
   // List-view column widths (px); Name takes the remaining space. Committed once per drag.
@@ -132,13 +134,13 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
     const targets = targetFor(entry);
     const single = targets.length === 1;
     const onlyFiles = targets.every((t) => t.kind === 'file');
-    const items: MenuItem[] = [{ id: 'open', label: 'Open', icon: <FolderIcon />, onSelect: () => onOpen(entry) }];
-    if (onlyFiles) items.push({ id: 'download', label: 'Download', icon: <DownloadIcon />, onSelect: () => onAction('download', targets) });
-    if (single) items.push({ id: 'rename', label: 'Rename', icon: <PencilIcon />, onSelect: () => onAction('rename', targets) });
-    items.push({ id: 'copy', label: 'Copy', icon: <CopyIcon />, onSelect: () => onAction('copy', targets) });
-    items.push({ id: 'move', label: 'Move', icon: <MoveIcon />, onSelect: () => onAction('move', targets) });
-    if (single) items.push({ id: 'info', label: 'Get Info', icon: <InfoIcon />, onSelect: () => onAction('info', targets) });
-    items.push({ id: 'delete', label: 'Delete', icon: <TrashIcon />, danger: true, separatorBefore: true, onSelect: () => onAction('delete', targets) });
+    const items: MenuItem[] = [{ id: 'open', label: t('common.open'), icon: <FolderIcon />, onSelect: () => onOpen(entry) }];
+    if (onlyFiles) items.push({ id: 'download', label: t('common.download'), icon: <DownloadIcon />, onSelect: () => onAction('download', targets) });
+    if (single) items.push({ id: 'rename', label: t('common.rename'), icon: <PencilIcon />, onSelect: () => onAction('rename', targets) });
+    items.push({ id: 'copy', label: t('common.copy'), icon: <CopyIcon />, onSelect: () => onAction('copy', targets) });
+    items.push({ id: 'move', label: t('common.move'), icon: <MoveIcon />, onSelect: () => onAction('move', targets) });
+    if (single) items.push({ id: 'info', label: t('files.getInfo'), icon: <InfoIcon />, onSelect: () => onAction('info', targets) });
+    items.push({ id: 'delete', label: t('common.delete'), icon: <TrashIcon />, danger: true, separatorBefore: true, onSelect: () => onAction('delete', targets) });
     return items;
   }
 
@@ -150,10 +152,10 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
     );
   }
   if (error) {
-    return <EmptyState icon={<InfoIcon />} title="Couldn’t load this folder" description={error} />;
+    return <EmptyState icon={<InfoIcon />} title={t('files.loadError')} description={error} />;
   }
   if (entries.length === 0) {
-    return <EmptyState icon={<FolderIcon />} title="This folder is empty" description="Upload files or create a folder to get started." action={emptyAction} />;
+    return <EmptyState icon={<FolderIcon />} title={t('files.empty')} description={t('files.emptyHint')} action={emptyAction} />;
   }
 
   if (view === 'grid') {
@@ -189,13 +191,13 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
       onClick={clearSelection}
     >
       <div className="grid gap-2 px-3 py-1.5 text-caption font-medium text-text-tertiary border-b border-separator" style={LIST_TEMPLATE}>
-        <span className="truncate">Name</span>
+        <span className="truncate">{t('files.colName')}</span>
         <span className="relative pl-2">
-          Size
+          {t('files.colSize')}
           <ColumnResizeHandle onPointerDown={(e) => beginColumnResize(e, 'size')} />
         </span>
         <span className="relative pl-2">
-          Modified
+          {t('files.colModified')}
           <ColumnResizeHandle onPointerDown={(e) => beginColumnResize(e, 'modified')} />
         </span>
       </div>

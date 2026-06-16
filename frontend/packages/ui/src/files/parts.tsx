@@ -2,6 +2,7 @@ import { useRef, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { Button } from '../controls';
 import { ChevronRightIcon, FileIcon, FileTextIcon, FolderIcon, ImageIcon, MusicIcon, PdfIcon, UploadIcon, VideoIcon } from '../icons';
+import { useT } from '../i18n';
 import type { FileEntry } from '../plugin/contract';
 
 export function FileEntryIcon({ entry, className }: { entry: FileEntry; className?: string }) {
@@ -41,7 +42,7 @@ export function Breadcrumb({ segments, onNavigate }: { segments: BreadcrumbSegme
 /** Hidden file input fronted by a Button; emits the chosen File[]. */
 export function UploadControl({
   onFiles,
-  label = 'Upload',
+  label,
   icon = <UploadIcon className="h-4 w-4" />,
   variant = 'secondary',
 }: {
@@ -50,6 +51,7 @@ export function UploadControl({
   icon?: ReactNode;
   variant?: 'primary' | 'secondary' | 'ghost';
 }) {
+  const t = useT();
   const ref = useRef<HTMLInputElement>(null);
   return (
     <>
@@ -65,7 +67,7 @@ export function UploadControl({
         }}
       />
       <Button variant={variant} size="sm" iconLeft={icon} onClick={() => ref.current?.click()}>
-        {label}
+        {label ?? t('common.upload')}
       </Button>
     </>
   );

@@ -42,6 +42,9 @@ class Settings:
 
     invites_path: str = os.environ.get("HOLISTIC_INVITES", "/var/lib/holistic/invites.json")
     revoked_path: str = os.environ.get("HOLISTIC_REVOKED", "/var/lib/holistic/revoked.json")
+    # App-managed profile store (first/last name, email, nickname, avatar). Written by the
+    # backend user directly, like invites — no OS-identity change, so no privileged wrapper.
+    profiles_root: str = os.environ.get("HOLISTIC_PROFILES", "/var/lib/holistic/profiles")
 
     pam_check: str = os.environ.get("HOLISTIC_PAM_CHECK", "/usr/local/sbin/holistic-pam-check")
     fs_broker: str = os.environ.get("HOLISTIC_FS_BROKER", "/usr/local/sbin/holistic-fs")
@@ -53,6 +56,7 @@ class Settings:
     cookie_secure: bool = _bool("HOLISTIC_COOKIE_SECURE", True)
 
     max_upload_bytes: int = int(os.environ.get("HOLISTIC_MAX_UPLOAD", str(20 * 1024**3)))
+    max_avatar_bytes: int = int(os.environ.get("HOLISTIC_MAX_AVATAR", str(5 * 1024**2)))
     max_text_bytes: int = int(os.environ.get("HOLISTIC_MAX_TEXT", str(2 * 1024**2)))
     max_listing: int = int(os.environ.get("HOLISTIC_MAX_LISTING", "5000"))
 
