@@ -23,6 +23,7 @@ import { SERVICES, serviceById } from './registry';
 import { LoginScreen } from './auth/LoginScreen';
 import { RegisterScreen } from './auth/RegisterScreen';
 import { ChangePasswordModal } from './auth/ChangePasswordModal';
+import { ProfileModal } from './auth/ProfileModal';
 
 function ServiceErrorFallback() {
   const t = useT();
@@ -57,12 +58,13 @@ function Brand() {
   );
 }
 
-function Shell({ user, onSignOut }: { user: HolisticUser; onSignOut: () => void }) {
+function Shell({ user, onSignOut, onUserChange }: { user: HolisticUser; onSignOut: () => void; onUserChange: (u: HolisticUser) => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const t = useT();
   const [title, setTitle] = useState<string | null>(null);
   const [pwOpen, setPwOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const isVisible = (s: ServicePlugin) => s.visible?.(user) ?? true;
   const visibleServices = SERVICES.filter(isVisible);
@@ -107,11 +109,12 @@ function Shell({ user, onSignOut }: { user: HolisticUser; onSignOut: () => void 
   return (
     <AppShell
       sidebar={<Sidebar header={<Brand />} items={items} activeId={serviceId} onSelect={(id) => navigate(`/app/${id}`)} />}
-      topBar={<TopBar title={title ?? (active ? serviceLabel(active) : undefined)} user={user} onSignOut={onSignOut} onChangePassword={() => setPwOpen(true)} />}
+      topBar={<TopBar title={title ?? (active ? serviceLabel(active) : undefined)} user={user} onSignOut={onSignOut} onEditProfile={() => setProfileOpen(true)} onChangePassword={() => setPwOpen(true)} />}
     >
       <ServiceBoundary key={serviceId}>
         {active && ctx ? <active.Component {...ctx} /> : <ContentRegion><EmptyState title={t('app.noServicesTitle')} description={t('app.noServicesDesc')} /></ContentRegion>}
       </ServiceBoundary>
+      <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} user={user} onUserChange={onUserChange} />
       <ChangePasswordModal open={pwOpen} onOpenChange={setPwOpen} />
     </AppShell>
   );
@@ -156,7 +159,7 @@ export function App() {
         )
       ) : (
         <BrowserRouter>
-          <Shell user={user} onSignOut={signOut} />
+          <Shell user={user} onSignOut={signOut} onUserChange={setUser} />
         </BrowserRouter>
       )}
       <Toaster />
