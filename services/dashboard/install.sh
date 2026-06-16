@@ -61,7 +61,10 @@ echo "[dashboard] building frontend..."
 # root-owned is ever left behind (this also self-heals trees from older installs).
 REPO_OWNER="$(stat -c '%u:%g' "$REPO_ROOT")"
 trap 'chown -R "$REPO_OWNER" "$REPO_ROOT/frontend" 2>/dev/null || true' EXIT
-( cd "$REPO_ROOT/frontend" && CI=true pnpm install --silent && pnpm --filter @holistic/app build )
+# export (not just a prefix) so CI=true covers BOTH pnpm calls — the build step runs
+# an implicit deps-status-check that would otherwise re-enter install interactively and
+# abort on the no-TTY purge prompt.
+( cd "$REPO_ROOT/frontend" && export CI=true && pnpm install --silent && pnpm --filter @holistic/app build )
 install -d -o holistic -g holistic "$WWW"
 rm -rf "${WWW:?}/"*
 cp -r "$REPO_ROOT/frontend/app/dist/." "$WWW/"
