@@ -1,6 +1,6 @@
 {
   "service": "samba",
-  "version": 1,
+  "version": 2,
   "categories": [
     {
       "id": "shares",
@@ -12,7 +12,7 @@
           "label": "Im Familien-Ordner schreiben",
           "description": "Dateien im geteilten Familien-Bereich anlegen, ändern, verschieben, hochladen und löschen. Der eigene private Bereich ist davon nie betroffen.",
           "group": "hp_samba_family_write",
-          "default": true
+          "default": false
         }
       ]
     }

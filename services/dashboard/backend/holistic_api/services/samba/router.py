@@ -12,9 +12,10 @@ from . import fsclient, paths
 
 router = APIRouter(prefix="/api/services/samba", tags=["samba"])
 
-# Rights standard: writing to the shared Family space is a `default: true` right —
-# provisioning grants `hp_samba_family_write` to every user, so behaviour is unchanged
-# unless an admin revokes it via privleg. Private "me/" space is never gated.
+# Rights standard: writing to the shared Family space is a default-OFF right — it is NOT
+# auto-granted at provisioning; a user gets `hp_samba_family_write` only when an admin grants
+# it (directly or via a rights group). Admins and holders may write; everyone else is
+# read-only there. Private "me/" space is never gated.
 SAMBA_FAMILY_WRITE = "hp_samba_family_write"
 
 
