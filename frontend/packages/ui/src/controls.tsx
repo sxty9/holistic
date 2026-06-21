@@ -189,7 +189,10 @@ export function SearchField({ value, onChange, placeholder = 'Search', className
 
 export function Checkbox({ checked, onChange, className, label }: { checked: boolean; onChange: (v: boolean) => void; className?: string; label?: ReactNode }) {
   return (
-    <label className={cn('inline-flex items-center gap-2 cursor-pointer select-none', className)}>
+    // `relative` anchors the visually-hidden (position:absolute) input to this label, so
+    // clicking it focuses an element at the control's own position — otherwise the browser
+    // scroll-jumps the page to reach the hidden input's distant containing block.
+    <label className={cn('relative inline-flex items-center gap-2 cursor-pointer select-none', className)}>
       <input type="checkbox" className="peer sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span
         className={cn(
@@ -211,7 +214,10 @@ export function Checkbox({ checked, onChange, className, label }: { checked: boo
 
 export function Switch({ checked, onChange, disabled, label, className }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; label?: ReactNode; className?: string }) {
   return (
-    <label className={cn('inline-flex items-center gap-2.5 select-none', disabled ? 'opacity-50 pointer-events-none' : 'cursor-pointer', className)}>
+    // `relative` anchors the visually-hidden (position:absolute) input to this label, so
+    // clicking it focuses an element at the control's own position — otherwise the browser
+    // scroll-jumps the page to reach the hidden input's distant containing block.
+    <label className={cn('relative inline-flex items-center gap-2.5 select-none', disabled ? 'opacity-50 pointer-events-none' : 'cursor-pointer', className)}>
       <input type="checkbox" role="switch" className="peer sr-only" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       <span
         className={cn(
