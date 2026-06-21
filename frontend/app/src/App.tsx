@@ -15,10 +15,11 @@ import {
   toast,
   useT,
   type HolisticUser,
+  type InstanceInfo,
   type ServiceContextProps,
   type ServicePlugin,
 } from '@holistic/ui';
-import { authApi, scopedApi } from './api/holisticClient';
+import { authApi, instanceApi, scopedApi } from './api/holisticClient';
 import { SERVICES, serviceById } from './registry';
 import { LoginScreen } from './auth/LoginScreen';
 import { RegisterScreen } from './auth/RegisterScreen';
@@ -58,7 +59,7 @@ function Brand() {
   );
 }
 
-function Shell({ user, onSignOut, onUserChange }: { user: HolisticUser; onSignOut: () => void; onUserChange: (u: HolisticUser) => void }) {
+function Shell({ user, instance, onSignOut, onUserChange }: { user: HolisticUser; instance: InstanceInfo; onSignOut: () => void; onUserChange: (u: HolisticUser) => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const t = useT();
@@ -100,9 +101,10 @@ function Shell({ user, onSignOut, onUserChange }: { user: HolisticUser; onSignOu
         setTitle,
       },
       ui: { toast, confirm },
+      instance,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active?.id, subPath, user]);
+  }, [active?.id, subPath, user, instance]);
 
   const items = visibleServices.map((s) => ({ id: s.id, label: serviceLabel(s), icon: s.icon }));
 
@@ -131,12 +133,20 @@ function Splash() {
 export function App() {
   const [user, setUser] = useState<HolisticUser | null | undefined>(undefined);
   const [view, setView] = useState<'login' | 'register'>('login');
+  // Seed from the current URL so it's always valid; /api/instance refines it (e.g. the
+  // canonical mailDomain, which window.location can't know).
+  const [instance, setInstance] = useState<InstanceInfo>(() => ({
+    origin: window.location.origin,
+    host: window.location.hostname,
+    mailDomain: '',
+  }));
 
   useEffect(() => {
     authApi
       .me()
       .then(setUser)
       .catch(() => setUser(null));
+    instanceApi.get().then(setInstance).catch(() => {});
   }, []);
 
   async function signOut() {
@@ -159,7 +169,7 @@ export function App() {
         )
       ) : (
         <BrowserRouter>
-          <Shell user={user} onSignOut={signOut} onUserChange={setUser} />
+          <Shell user={user} instance={instance} onSignOut={signOut} onUserChange={setUser} />
         </BrowserRouter>
       )}
       <Toaster />

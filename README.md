@@ -53,6 +53,37 @@ sudo mount -a
 Create `services/<name>/install.sh`, add `<name>` to `services/manifest`.
 Runs as root, must be idempotent, must print `[<name>] installed and started`.
 
+## Runtime domain
+
+holistic is portable: it has no hardcoded hostname and runs same-origin behind Caddy on
+whatever domain you point at it. The domain it is currently served on is resolved at
+runtime from the (Caddy-set) forwarded headers — `GET /api/instance` is the single source
+of truth:
+
+```jsonc
+{ "origin": "https://example.com", "host": "example.com", "mailDomain": "example.com" }
+```
+
+- **`origin` / `host`** are per-request (LAN `holistic.local`, the public tunnel domain, dev
+  `localhost` — whatever the client used). Use these for absolute links/redirects.
+- **`mailDomain`** is the *stable, canonical* domain for addresses like `user@<mailDomain>`
+  (e.g. a future email service). It is learned once from the first **public** access and
+  persisted to `/var/lib/holistic/instance.json`; LAN/loopback/IP hosts are ignored, so it
+  is `""` until a real domain is seen.
+
+How a service consumes it:
+
+- **UI plugin:** read `props.instance` (`InstanceInfo` in `@holistic/ui`) — e.g.
+  `` `${user.username}@${instance.mailDomain}` ``. If `mailDomain` is `""`, prompt the
+  operator to set `HOLISTIC_MAIL_DOMAIN`.
+- **Service daemon:** read `/var/lib/holistic/instance.json` (shared state, like
+  `jwt-secret`/`permissions.d`) or call `/api/instance`.
+
+Overrides (env on the dashboard unit; empty = auto): `HOLISTIC_MAIL_DOMAIN` pins the
+canonical mail domain — set it when you want the apex (`henrysoase.org`) instead of the
+served host (`holistic.henrysoase.org`), or a different MX domain. `HOLISTIC_PUBLIC_ORIGIN`
+pins the full `scheme://host` (rare).
+
 ## Declare permissions (rights standard)
 
 Admin = the `sudo` group and can do everything. To grant **non-admin** users

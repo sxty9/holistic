@@ -1,4 +1,4 @@
-import type { HolisticUser, ServiceApiClient } from '@holistic/ui';
+import type { HolisticUser, InstanceInfo, ServiceApiClient } from '@holistic/ui';
 
 export class ApiError extends Error {
   constructor(
@@ -55,6 +55,12 @@ export const authApi = {
     return request<HolisticUser>('/api/account/avatar', { method: 'POST', body: form });
   },
   deleteAvatar: () => request<HolisticUser>('/api/account/avatar', { method: 'DELETE' }),
+};
+
+/** Runtime domain this instance is served on — the single source of truth for the shell
+ *  and every service (see InstanceInfo / GET /api/instance). */
+export const instanceApi = {
+  get: () => request<InstanceInfo>('/api/instance'),
 };
 
 /** A service-scoped client (base /api/services/<id>/) handed to each service Component. */

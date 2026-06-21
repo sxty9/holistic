@@ -57,6 +57,18 @@ class Settings:
 
     invites_path: str = os.environ.get("HOLISTIC_INVITES", "/var/lib/holistic/invites.json")
     revoked_path: str = os.environ.get("HOLISTIC_REVOKED", "/var/lib/holistic/revoked.json")
+    # Runtime domain awareness (see instance.py). All optional → zero-config: empty means
+    # "derive from the incoming request". holistic is served same-origin behind Caddy on
+    # whatever domain the operator points at it, so the public origin/host is read live from
+    # the (Caddy-set) forwarded headers rather than hardcoded.
+    #   public_origin  — pins the full scheme://host (rare; e.g. behind an extra proxy hop).
+    #   mail_domain    — pins the canonical mail domain (e.g. apex henrysoase.org instead of
+    #                    the served holistic.henrysoase.org). Highest precedence.
+    #   instance_path  — where the auto-learned canonical mail domain is persisted (stable
+    #                    across access paths), like invites/revoked above.
+    public_origin: str = os.environ.get("HOLISTIC_PUBLIC_ORIGIN", "").strip()
+    mail_domain: str = os.environ.get("HOLISTIC_MAIL_DOMAIN", "").strip()
+    instance_path: str = os.environ.get("HOLISTIC_INSTANCE", "/var/lib/holistic/instance.json")
     # App-managed profile store (first/last name, email, nickname, avatar). Written by the
     # backend user directly, like invites — no OS-identity change, so no privileged wrapper.
     profiles_root: str = os.environ.get("HOLISTIC_PROFILES", "/var/lib/holistic/profiles")

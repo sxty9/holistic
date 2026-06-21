@@ -41,12 +41,24 @@ export interface ServiceUiBridge {
   confirm(opts: { title: string; description?: ReactNode; danger?: boolean; confirmLabel?: string }): Promise<boolean>;
 }
 
+/** Which domain this holistic instance is currently served on, resolved at runtime so the
+ *  app is portable across deployments (any operator, any domain, zero hardcoding).
+ *  `mailDomain` is the stable, canonical domain for addresses like `user@<mailDomain>` —
+ *  empty until a public domain has been observed (then a service should prompt the operator
+ *  to set HOLISTIC_MAIL_DOMAIN). Source of truth: GET /api/instance. */
+export interface InstanceInfo {
+  origin: string; // e.g. "https://example.com"
+  host: string; // e.g. "example.com"
+  mailDomain: string; // canonical mail domain, or "" if none detected yet
+}
+
 /** Props the shell passes to every service's root Component. */
 export interface ServiceContextProps {
   user: HolisticUser;
   api: ServiceApiClient;
   nav: ServiceNavigation;
   ui: ServiceUiBridge;
+  instance: InstanceInfo; // runtime domain — single source of truth for services
 }
 
 /** THE CONTRACT: services/<name>/ui/index.tsx default-exports this object. */

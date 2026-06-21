@@ -7,7 +7,10 @@ User=holistic
 Group=holistic
 Environment=HOLISTIC_SECRET_FILE=/etc/holistic/jwt-secret
 # Single worker: in-memory session-revocation/rate-limit state stays coherent.
-ExecStart=/opt/holistic/venv/bin/uvicorn holistic_api.main:app --host 127.0.0.1 --port 8770 --workers 1
+# --proxy-headers + --forwarded-allow-ips=127.0.0.1: trust X-Forwarded-* only from Caddy
+# (the sole loopback peer) so request.url/base_url reflect the real public origin the
+# instance is served on. See instance.py for the trust boundary.
+ExecStart=/opt/holistic/venv/bin/uvicorn holistic_api.main:app --host 127.0.0.1 --port 8770 --workers 1 --proxy-headers --forwarded-allow-ips=127.0.0.1
 Restart=on-failure
 RestartSec=2
 # Must be false: the backend escalates via sudo to the narrow wrapper allowlist.

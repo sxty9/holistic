@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from .routers import account, admin, auth
+from .routers import account, admin, auth, instance
 from .services.samba import router as samba_router
 
 
@@ -12,6 +12,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(account.router)
     app.include_router(admin.router)
+    app.include_router(instance.router)
     app.include_router(samba_router.router)
 
     @app.get("/api/health")
