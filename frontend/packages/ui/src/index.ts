@@ -32,6 +32,7 @@ export {
   IconButton,
   Input,
   PasswordInput,
+  Textarea,
   Field,
   SegmentedControl,
   SearchField,
@@ -39,7 +40,7 @@ export {
   Switch,
   InlineLink,
 } from './controls';
-export type { ButtonProps, IconButtonProps, InputProps, FieldProps, SegmentedOption } from './controls';
+export type { ButtonProps, IconButtonProps, InputProps, TextareaProps, FieldProps, SegmentedOption } from './controls';
 
 // Overlays
 export { Modal, Sheet } from './overlay/modal';

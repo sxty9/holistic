@@ -1,4 +1,4 @@
-import { forwardRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { cn } from './lib/cn';
 import { Spinner } from './primitives';
 import { EyeIcon, EyeOffIcon, SearchIcon } from './icons';
@@ -89,6 +89,19 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ invalid, className, ...rest }, ref) {
   return <input ref={ref} className={cn(inputBase, 'h-10', invalid && 'border-danger focus:ring-danger/40 focus:border-danger', className)} {...rest} />;
+});
+
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  invalid?: boolean;
+}
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea({ invalid, className, ...rest }, ref) {
+  return (
+    <textarea
+      ref={ref}
+      className={cn(inputBase, 'min-h-32 py-2 leading-relaxed resize-y', invalid && 'border-danger focus:ring-danger/40 focus:border-danger', className)}
+      {...rest}
+    />
+  );
 });
 
 export const PasswordInput = forwardRef<HTMLInputElement, InputProps>(function PasswordInput({ invalid, className, ...rest }, ref) {

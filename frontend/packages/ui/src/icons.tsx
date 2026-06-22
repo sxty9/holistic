@@ -58,6 +58,9 @@ export const CopyIcon = icon(<><rect x="9" y="9" width="11" height="11" rx="2" /
 export const InfoIcon = icon(<><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>);
 export const FilesIcon = icon(<><path d="M7 3h7l4 4v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /><path d="M14 3v4h4" /></>);
 export const CheckIcon = icon(<path d="m5 12 5 5 9-11" />);
+export const MailIcon = icon(<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3.5 7.5 8.5 6 8.5-6" /></>);
+export const ReplyIcon = icon(<><path d="M9 7 4 12l5 5" /><path d="M4 12h9a7 7 0 0 1 7 7" /></>);
+export const SendIcon = icon(<><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7Z" /></>);
 export const AlertIcon = icon(<><path d="M12 4 2 20h20L12 4Z" /><path d="M12 10v5M12 18h.01" /></>);
 
 // Hardware / metrics icons (for hostek's live-server dashboard).
