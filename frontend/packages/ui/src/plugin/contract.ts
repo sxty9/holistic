@@ -13,7 +13,6 @@ export interface HolisticUser {
   // payloads and services that don't care keep working unchanged.
   firstName?: string;
   lastName?: string;
-  email?: string;
   avatarUrl?: string | null; // profile photo, or null/undefined for initials
 }
 

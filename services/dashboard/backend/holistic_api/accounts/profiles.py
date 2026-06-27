@@ -1,4 +1,4 @@
-"""App-managed profile data: first/last name, email, nickname and avatar image.
+"""App-managed profile data: first/last name, nickname and avatar image.
 
 Identity (username, groups, admin) stays sourced from the OS — this only holds the
 extra, user-editable fields the OS has no home for. Written DIRECTLY by the
@@ -18,10 +18,9 @@ from ..config import settings
 
 # Mirror auth.USER_RE — never touch the filesystem with an unvalidated name.
 USER_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 # The user-editable text fields stored per user.
-FIELDS = ("firstName", "lastName", "email", "nickname")
+FIELDS = ("firstName", "lastName", "nickname")
 TEXT_MAX = 200  # cap on any single text field
 
 

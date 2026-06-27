@@ -14,14 +14,13 @@ _DEV_USERS: dict[str, dict] = {}
 
 def _with_profile(info: dict) -> dict:
     """Overlay the app-managed profile: a chosen nickname wins over the OS display name,
-    and the extra fields (first/last name, email, avatar URL) are attached."""
+    and the extra fields (first/last name, avatar URL) are attached."""
     name = info["username"]
     prof = profiles.load(name)
     if prof["nickname"]:
         info["displayName"] = prof["nickname"]
     info["firstName"] = prof["firstName"]
     info["lastName"] = prof["lastName"]
-    info["email"] = prof["email"]
     info["avatarUrl"] = profiles.avatar_url(name)
     return info
 

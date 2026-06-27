@@ -28,7 +28,7 @@ def change_password(body: PasswordChangeRequest, user: dict = Depends(current_us
 
 @router.get("/profile")
 def get_profile(user: dict = Depends(current_user)):
-    # The shared user shape (effective displayName + first/last/email/avatar) plus the
+    # The shared user shape (effective displayName + first/last/avatar) plus the
     # RAW nickname override, so the editor seeds the actual stored value (not the OS fallback).
     data = dict(user)
     data["nickname"] = profiles.load(user["username"])["nickname"]

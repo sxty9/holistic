@@ -47,7 +47,7 @@ export const authApi = {
   changePassword: (current_password: string, new_password: string) =>
     request<void>('/api/account/password', { method: 'POST', body: { current_password, new_password } }),
   getProfile: () => request<HolisticUser & { nickname: string }>('/api/account/profile'),
-  updateProfile: (data: { firstName: string; lastName: string; email: string; nickname: string }) =>
+  updateProfile: (data: { firstName: string; lastName: string; nickname: string }) =>
     request<HolisticUser>('/api/account/profile', { method: 'PUT', body: data }),
   uploadAvatar: (file: File) => {
     const form = new FormData();

@@ -69,7 +69,7 @@ class Settings:
     public_origin: str = os.environ.get("HOLISTIC_PUBLIC_ORIGIN", "").strip()
     mail_domain: str = os.environ.get("HOLISTIC_MAIL_DOMAIN", "").strip()
     instance_path: str = os.environ.get("HOLISTIC_INSTANCE", "/var/lib/holistic/instance.json")
-    # App-managed profile store (first/last name, email, nickname, avatar). Written by the
+    # App-managed profile store (first/last name, nickname, avatar). Written by the
     # backend user directly, like invites — no OS-identity change, so no privileged wrapper.
     profiles_root: str = os.environ.get("HOLISTIC_PROFILES", "/var/lib/holistic/profiles")
 

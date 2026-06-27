@@ -15,8 +15,6 @@ import {
 } from '@holistic/ui';
 import { ApiError, authApi } from '../api/holisticClient';
 
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-
 export function ProfileModal({
   open,
   onOpenChange,
@@ -31,7 +29,6 @@ export function ProfileModal({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [nickname, setNickname] = useState('');
-  const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,30 +42,23 @@ export function ProfileModal({
     setFirstName(user.firstName ?? '');
     setLastName(user.lastName ?? '');
     setNickname('');
-    setEmail(user.email ?? '');
     authApi
       .getProfile()
       .then((p) => {
         setFirstName(p.firstName ?? '');
         setLastName(p.lastName ?? '');
         setNickname(p.nickname ?? '');
-        setEmail(p.email ?? '');
       })
       .catch(() => {});
   }, [open, user]);
 
-  const emailInvalid = email.length > 0 && !EMAIL_RE.test(email);
   const fullName = [firstName, lastName].filter(Boolean).join(' ');
 
   async function save() {
-    if (emailInvalid) {
-      setError('Please enter a valid email address.');
-      return;
-    }
     setBusy(true);
     setError(null);
     try {
-      onUserChange(await authApi.updateProfile({ firstName, lastName, email, nickname }));
+      onUserChange(await authApi.updateProfile({ firstName, lastName, nickname }));
       toast({ title: 'Profile updated', variant: 'success' });
       onOpenChange(false);
     } catch (err) {
@@ -117,14 +107,14 @@ export function ProfileModal({
       open={open}
       onOpenChange={onOpenChange}
       title="Profile"
-      description="Manage your name, email and photo."
+      description="Manage your name and photo."
       size="sm"
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={save} loading={busy} disabled={emailInvalid}>
+          <Button variant="primary" onClick={save} loading={busy}>
             Save
           </Button>
         </>
@@ -164,9 +154,6 @@ export function ProfileModal({
         </Grid>
         <Field label="Nickname" hint="Shown across Holistic; defaults to your username">
           <Input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder={user.username} autoComplete="nickname" />
-        </Field>
-        <Field label="Email" error={emailInvalid ? 'Enter a valid email address.' : undefined}>
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" invalid={emailInvalid} placeholder="you@example.com" />
         </Field>
         {error && (
           <Text variant="footnote" color="danger">
