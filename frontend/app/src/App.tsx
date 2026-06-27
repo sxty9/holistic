@@ -12,6 +12,7 @@ import {
   Toaster,
   TopBar,
   confirm,
+  serviceVisibleByDefault,
   toast,
   useT,
   type HolisticUser,
@@ -67,7 +68,9 @@ function Shell({ user, instance, onSignOut, onUserChange }: { user: HolisticUser
   const [pwOpen, setPwOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const isVisible = (s: ServicePlugin) => s.visible?.(user) ?? true;
+  // A service defines its own gate, else the default rights gate applies (admin, or holds one
+  // of the service's hp_<id>_* rights) — so a service the user has no rights for never shows.
+  const isVisible = (s: ServicePlugin) => (s.visible ? s.visible(user) : serviceVisibleByDefault(user, s.id));
   const visibleServices = SERVICES.filter(isVisible);
   // A service may register a localized name under `service.<id>`; otherwise its
   // static displayName (the canonical English label) stands in.

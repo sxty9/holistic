@@ -26,6 +26,13 @@ def _with_profile(info: dict) -> dict:
     return info
 
 
+def _shell_enabled(shell: str) -> bool:
+    """True if the login shell is a real shell (not nologin/false) — the source of truth for
+    the shell-type right (remshel). Mirrors privleg's ShellEnabled."""
+    shell = (shell or "").strip()
+    return bool(shell) and os.path.basename(shell) not in ("nologin", "false")
+
+
 def dev_register(username: str, display_name: str, admin: bool = False) -> None:
     _DEV_USERS[username] = {"displayName": display_name or username, "isAdmin": admin}
 
@@ -60,7 +67,7 @@ def get_user_info(username: str) -> dict:
     if settings.dev_fake_provision:
         d = _DEV_USERS.get(username, {"displayName": username, "isAdmin": False})
         groups = ["family", "smbusers"] + ([settings.admin_group] if d["isAdmin"] else [])
-        return _with_profile({"username": username, "displayName": d["displayName"], "groups": groups, "isAdmin": d["isAdmin"]})
+        return _with_profile({"username": username, "displayName": d["displayName"], "groups": groups, "isAdmin": d["isAdmin"], "shellEnabled": True})
 
     pw = pwd.getpwnam(username)
     primary = grp.getgrgid(pw.pw_gid).gr_name
@@ -78,4 +85,5 @@ def get_user_info(username: str) -> dict:
         "displayName": display,
         "groups": sorted(groups),
         "isAdmin": settings.admin_group in groups,
+        "shellEnabled": _shell_enabled(pw.pw_shell),
     })
