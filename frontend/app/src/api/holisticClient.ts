@@ -16,7 +16,30 @@ function csrfToken(): string {
   return m ? decodeURIComponent(m[1]) : '';
 }
 
-async function request<T>(path: string, opts: RequestOpts = {}): Promise<T> {
+// The access token (h_access) is short-lived (15 min); the refresh token (h_refresh, 7 days,
+// scoped to /api/auth) is exchanged for a fresh session at POST /api/auth/refresh. Single-flight
+// the refresh so a burst of concurrent 401s rotates the session only once — the endpoint revokes
+// the old session id on each call, so racing refreshes would invalidate one another.
+let refreshing: Promise<boolean> | null = null;
+
+function refreshSession(): Promise<boolean> {
+  if (!refreshing) {
+    refreshing = fetch('/api/auth/refresh', { method: 'POST', headers: { 'X-CSRF-Token': csrfToken() }, credentials: 'include' })
+      .then((r) => r.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshing = null;
+      });
+  }
+  return refreshing;
+}
+
+// A 401 on these means bad credentials / no session — not an expired access token — so they must
+// never trigger (or recurse into) a refresh. Every other 401, including /api/auth/me on bootstrap,
+// is retried once after a successful refresh.
+const NO_REFRESH = new Set(['/api/auth/login', '/api/auth/register', '/api/auth/logout', '/api/auth/refresh']);
+
+async function request<T>(path: string, opts: RequestOpts = {}, retry = true): Promise<T> {
   const method = (opts.method ?? 'GET').toUpperCase();
   const headers = new Headers(opts.headers);
   let body = opts.body as BodyInit | undefined;
@@ -27,6 +50,13 @@ async function request<T>(path: string, opts: RequestOpts = {}): Promise<T> {
   if (method !== 'GET' && method !== 'HEAD') headers.set('X-CSRF-Token', csrfToken());
 
   const res = await fetch(path, { ...opts, method, headers, body, credentials: 'include' });
+
+  // Transparently recover from an expired access token: refresh once, then replay the request
+  // (which re-reads the rotated CSRF cookie). retry=false on the replay caps it at a single retry.
+  if (res.status === 401 && retry && !NO_REFRESH.has(path) && (await refreshSession())) {
+    return request<T>(path, opts, false);
+  }
+
   if (res.status === 204) return undefined as T;
   const ct = res.headers.get('content-type') ?? '';
   const data = ct.includes('application/json') ? await res.json().catch(() => null) : await res.text();
