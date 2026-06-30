@@ -71,7 +71,10 @@ export function RichTextEditor({
   const fileRef = useRef<HTMLInputElement>(null);
   const selRef = useRef<Range | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const cellRef = useRef<HTMLTableCellElement | null>(null);
   const [handle, setHandle] = useState<{ left: number; top: number } | null>(null);
+  const [inTable, setInTable] = useState(false);
+  const [blockTag, setBlockTag] = useState('P');
   const [empty, setEmpty] = useState(() => htmlIsBlank(defaultValue));
   const [active, setActive] = useState<Record<string, boolean>>({});
   const [bar, setBar] = useState<'none' | 'link' | 'table'>('none');
@@ -88,6 +91,8 @@ export function RichTextEditor({
     setEmpty(htmlIsBlank(defaultValue));
     imgRef.current = null;
     setHandle(null);
+    cellRef.current = null;
+    setInTable(false);
     if (autoFocus) placeCaretAtEnd(el);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
@@ -123,6 +128,79 @@ export function RichTextEditor({
   function onSelectionActivity() {
     saveSel();
     refreshActive();
+    const cell = cellAncestor();
+    cellRef.current = cell;
+    setInTable(!!cell);
+  }
+
+  // ── table editing (change the number of rows/columns of an existing table) ──────────
+  function cellAncestor(): HTMLTableCellElement | null {
+    if (typeof window === 'undefined') return null;
+    const sel = window.getSelection();
+    let n: Node | null = sel?.anchorNode ?? null;
+    while (n && n !== ref.current) {
+      if (n.nodeType === 1) {
+        const tag = (n as HTMLElement).tagName;
+        if (tag === 'TD' || tag === 'TH') return n as HTMLTableCellElement;
+      }
+      n = n.parentNode;
+    }
+    return null;
+  }
+
+  function styleCell(td: HTMLTableCellElement) {
+    td.setAttribute('style', 'border:1px solid #cfcfcf;padding:6px 8px;min-width:2.5em');
+    td.innerHTML = '<br>';
+  }
+
+  // withCell runs an operation against the caret's current cell/row/table, then re-emits.
+  function withCell(fn: (cell: HTMLTableCellElement, row: HTMLTableRowElement, table: HTMLTableElement) => void) {
+    const cell = cellRef.current;
+    const row = cell?.parentElement as HTMLTableRowElement | null;
+    const table = cell?.closest('table') as HTMLTableElement | null;
+    if (!cell || !row || !table || !ref.current?.contains(table)) return;
+    fn(cell, row, table);
+    emit();
+  }
+
+  function addRow(below: boolean) {
+    withCell((_cell, row, table) => {
+      const tr = table.insertRow(row.rowIndex + (below ? 1 : 0));
+      for (let i = 0; i < row.cells.length; i++) styleCell(tr.insertCell());
+    });
+  }
+
+  function addColumn(after: boolean) {
+    withCell((cell, _row, table) => {
+      const idx = cell.cellIndex + (after ? 1 : 0);
+      for (const r of Array.from(table.rows)) styleCell(r.insertCell(Math.min(idx, r.cells.length)));
+    });
+  }
+
+  function removeRow() {
+    withCell((_cell, row, table) => {
+      if (table.rows.length <= 1) removeTable(table);
+      else table.deleteRow(row.rowIndex);
+    });
+  }
+
+  function removeColumn() {
+    withCell((cell, row, table) => {
+      if (row.cells.length <= 1) {
+        removeTable(table);
+        return;
+      }
+      const idx = cell.cellIndex;
+      for (const r of Array.from(table.rows)) if (idx < r.cells.length) r.deleteCell(idx);
+    });
+  }
+
+  function removeTable(table?: HTMLTableElement) {
+    const t = table ?? cellRef.current?.closest('table') ?? null;
+    if (t && t.parentNode) t.parentNode.removeChild(t);
+    cellRef.current = null;
+    setInTable(false);
+    emit();
   }
 
   function refreshActive() {
@@ -146,6 +224,7 @@ export function RichTextEditor({
       justifyRight: q('justifyRight'),
       quote: !!blockquoteAncestor(),
     });
+    setBlockTag(currentBlockTag());
   }
 
   function exec(command: string, value?: string) {
@@ -258,20 +337,89 @@ export function RichTextEditor({
 
   // toggleQuote wraps the block in a <blockquote>, or unwraps it when the caret is already inside
   // one (un-quote), moving the quoted content back out to its parent.
+  function unwrapBlockquote(bq: HTMLElement) {
+    const parent = bq.parentNode;
+    if (!parent) return;
+    const firstMoved = bq.firstChild;
+    while (bq.firstChild) parent.insertBefore(bq.firstChild, bq);
+    parent.removeChild(bq);
+    // Put the caret back into the unwrapped content so the next toggle reads the right context.
+    const sel = window.getSelection();
+    if (sel && firstMoved) {
+      const r = document.createRange();
+      r.setStart(firstMoved, 0);
+      r.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+  }
+
+  // toggleQuote (the Quote button) and setBlock (the Style menu) share one model so they stay in
+  // sync: Quote toggles the blockquote; choosing a heading/normal un-quotes first, so a block is
+  // either a quote OR a heading/normal, never a confusing mix.
   function toggleQuote() {
     if (typeof document === 'undefined') return;
     ref.current?.focus();
-    restoreSel();
     const bq = blockquoteAncestor();
-    if (bq && bq.parentNode) {
-      const parent = bq.parentNode;
-      while (bq.firstChild) parent.insertBefore(bq.firstChild, bq);
-      parent.removeChild(bq);
-    } else {
-      document.execCommand('formatBlock', false, 'BLOCKQUOTE');
-    }
+    if (bq) unwrapBlockquote(bq);
+    else document.execCommand('formatBlock', false, 'BLOCKQUOTE');
+    saveSel();
     emit();
     refreshActive();
+  }
+
+  function setBlock(tag: string) {
+    if (typeof document === 'undefined') return;
+    ref.current?.focus();
+    const bq = blockquoteAncestor();
+    if (bq) unwrapBlockquote(bq);
+    document.execCommand('formatBlock', false, tag);
+    saveSel();
+    emit();
+    refreshActive();
+  }
+
+  // clearFormatting strips ALL formatting from the selection: inline (bold/italic/colour/size/font),
+  // links, list wrapping, the block format (headings/quote → normal paragraph) and alignment.
+  function clearFormatting() {
+    if (typeof document === 'undefined') return;
+    ref.current?.focus();
+    try {
+      document.execCommand('removeFormat');
+      document.execCommand('unlink');
+      if (document.queryCommandState('insertUnorderedList')) document.execCommand('insertUnorderedList');
+      if (document.queryCommandState('insertOrderedList')) document.execCommand('insertOrderedList');
+    } catch {
+      /* ignore */
+    }
+    const bq = blockquoteAncestor();
+    if (bq) unwrapBlockquote(bq);
+    try {
+      document.execCommand('formatBlock', false, 'P');
+      document.execCommand('justifyLeft');
+    } catch {
+      /* ignore */
+    }
+    saveSel();
+    emit();
+    refreshActive();
+  }
+
+  // currentBlockTag reports the block format at the caret for the Style menu; a blockquote wins over
+  // any heading/normal it contains.
+  function currentBlockTag(): string {
+    if (blockquoteAncestor()) return 'BLOCKQUOTE';
+    if (typeof window === 'undefined') return 'P';
+    const sel = window.getSelection();
+    let n: Node | null = sel?.anchorNode ?? null;
+    while (n && n !== ref.current) {
+      if (n.nodeType === 1) {
+        const tag = (n as HTMLElement).tagName;
+        if (tag === 'H1' || tag === 'H2' || tag === 'H3') return tag;
+      }
+      n = n.parentNode;
+    }
+    return 'P';
   }
 
   function openBar(which: 'link' | 'table') {
@@ -346,12 +494,13 @@ export function RichTextEditor({
   }
 
   const blockItems: MenuItem[] = [
-    { id: 'p', label: 'Normal text', onSelect: () => exec('formatBlock', 'P') },
-    { id: 'h1', label: 'Title', onSelect: () => exec('formatBlock', 'H1') },
-    { id: 'h2', label: 'Heading', onSelect: () => exec('formatBlock', 'H2') },
-    { id: 'h3', label: 'Subheading', onSelect: () => exec('formatBlock', 'H3') },
-    { id: 'quote', label: 'Quote', onSelect: () => exec('formatBlock', 'BLOCKQUOTE') },
+    { id: 'p', label: 'Normal text', checked: blockTag === 'P', onSelect: () => setBlock('P') },
+    { id: 'h1', label: 'Title', checked: blockTag === 'H1', onSelect: () => setBlock('H1') },
+    { id: 'h2', label: 'Heading', checked: blockTag === 'H2', onSelect: () => setBlock('H2') },
+    { id: 'h3', label: 'Subheading', checked: blockTag === 'H3', onSelect: () => setBlock('H3') },
+    { id: 'quote', label: 'Quote', checked: blockTag === 'BLOCKQUOTE', onSelect: toggleQuote },
   ];
+  const blockLabel = ({ P: 'Normal', H1: 'Title', H2: 'Heading', H3: 'Subheading', BLOCKQUOTE: 'Quote' } as Record<string, string>)[blockTag] ?? 'Normal';
   const sizeItems: MenuItem[] = [
     { id: 's', label: 'Small', onSelect: () => styled('fontSize', '2') },
     { id: 'n', label: 'Normal', onSelect: () => styled('fontSize', '3') },
@@ -367,7 +516,7 @@ export function RichTextEditor({
           items={blockItems}
           trigger={
             <Button size="sm" variant="ghost" iconRight={<ChevronDownIcon />} onMouseDown={(e) => e.preventDefault()}>
-              Style
+              {blockLabel}
             </Button>
           }
         />
@@ -403,7 +552,7 @@ export function RichTextEditor({
         <Tool icon={<ImageIcon />} label="Insert image" onClick={chooseImage} />
         <Tool icon={<TableIcon />} label="Insert table" active={bar === 'table'} onClick={() => openBar('table')} />
         <Tool icon={<MinusIcon />} label="Horizontal line" onClick={() => exec('insertHorizontalRule')} />
-        <Tool icon={<ClearFormatIcon />} label="Clear formatting" onClick={() => exec('removeFormat')} />
+        <Tool icon={<ClearFormatIcon />} label="Clear formatting" onClick={clearFormatting} />
       </div>
 
       {bar === 'link' && (
@@ -458,6 +607,21 @@ export function RichTextEditor({
           <Button size="sm" variant="ghost" onMouseDown={(e) => e.preventDefault()} onClick={() => setBar('none')}>
             Cancel
           </Button>
+        </div>
+      )}
+
+      {inTable && (
+        <div className="flex flex-wrap items-center gap-1 border-b border-separator bg-fill/5 px-2 py-1">
+          <span className="px-1 text-footnote font-medium text-text-secondary">Table</span>
+          <TableBtn onClick={() => addRow(false)}>+ Row above</TableBtn>
+          <TableBtn onClick={() => addRow(true)}>+ Row below</TableBtn>
+          <TableBtn onClick={removeRow}>− Row</TableBtn>
+          <Separator />
+          <TableBtn onClick={() => addColumn(false)}>+ Col left</TableBtn>
+          <TableBtn onClick={() => addColumn(true)}>+ Col right</TableBtn>
+          <TableBtn onClick={removeColumn}>− Col</TableBtn>
+          <Separator />
+          <TableBtn onClick={() => removeTable()}>Delete table</TableBtn>
         </div>
       )}
 
@@ -524,6 +688,14 @@ function Swatch({ title, defaultValue, onPick, onOpen }: { title: string; defaul
 
 function Separator() {
   return <div className="mx-1 h-5 w-px bg-separator" aria-hidden="true" />;
+}
+
+function TableBtn({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <Button size="sm" variant="ghost" onMouseDown={(e) => e.preventDefault()} onClick={onClick}>
+      {children}
+    </Button>
+  );
 }
 
 function Tool({ icon, label, active, onClick }: { icon: ReactNode; label: string; active?: boolean; onClick: () => void }) {
