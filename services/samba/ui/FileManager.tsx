@@ -7,6 +7,7 @@ import {
   FileBrowser,
   FilePreview,
   FileToolbar,
+  Modal,
   MoveIcon,
   NewFolderDialog,
   Panel,
@@ -15,6 +16,7 @@ import {
   Stack,
   Text,
   UploadControl,
+  folderActions,
   formatBytes,
   formatDate,
   useT,
@@ -22,6 +24,7 @@ import {
   type FileActionId,
   type FileEntry,
   type FileRoot,
+  type FolderAction,
   type ServiceContextProps,
   type TextPayload,
 } from '@holistic/ui';
@@ -48,8 +51,12 @@ function buildBreadcrumb(cwd: string, roots: FileRoot[], rootLabel: (key: string
 const q = (path: string) => encodeURIComponent(path);
 const parentOf = (path: string) => path.split('/').slice(0, -1).join('/');
 
-export function FileManager({ user, api, ui }: ServiceContextProps) {
+export function FileManager({ user, api, apiFor, ui }: ServiceContextProps) {
   const t = useT();
+  // Folder-level actions other services contribute to the Files toolbar (e.g. aigentic's
+  // "Ask AI"). Generic: this component never imports any specific action.
+  const extraActions = folderActions().filter((a) => !a.visible || a.visible(user));
+  const [openAction, setOpenAction] = useState<FolderAction | null>(null);
   // The server returns English drive labels ("My Drive", "Family"); map the known
   // share keys to the active language, falling back to whatever the server sent.
   const rootLabel = (key: string, fallback: string) =>
@@ -96,6 +103,9 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
   const canGoUp = cwd.includes('/'); // false at a share root — nothing above it
   const filtered = search ? entries.filter((e) => e.name.toLowerCase().includes(search.toLowerCase())) : entries;
   const selectedEntries = entries.filter((e) => selection.has(e.path));
+  // Viewable items in the current view, for the preview's prev/next navigation.
+  const viewable = filtered.filter((e) => e.kind === 'file' && !!e.viewer);
+  const previewIdx = preview ? viewable.findIndex((e) => e.path === preview.entry.path) : -1;
   const cutPaths = clipboard?.mode === 'move' ? new Set(clipboard.items.map((i) => i.path)) : undefined;
 
   function navigate(path: string) {
@@ -250,6 +260,21 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
               onNewFolder={() => setNewFolderOpen(true)}
               onUpload={doUpload}
               onAction={handleAction}
+              actions={
+                extraActions.length > 0
+                  ? extraActions.map((a) => (
+                      <Button
+                        key={a.id}
+                        variant="secondary"
+                        size="sm"
+                        iconLeft={a.icon ? <a.icon className="h-4 w-4" /> : undefined}
+                        onClick={() => setOpenAction(a)}
+                      >
+                        {a.label}
+                      </Button>
+                    ))
+                  : undefined
+              }
             />
 
             {clipboard && (
@@ -306,9 +331,26 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
         text={preview?.text}
         onOpenChange={(o) => !o && setPreview(null)}
         onDownload={(e) => download([e])}
+        onPrev={previewIdx > 0 ? () => openEntry(viewable[previewIdx - 1]) : undefined}
+        onNext={previewIdx >= 0 && previewIdx < viewable.length - 1 ? () => openEntry(viewable[previewIdx + 1]) : undefined}
       />
       <NewFolderDialog open={newFolderOpen} onOpenChange={setNewFolderOpen} onSubmit={doMkdir} />
       <RenameDialog open={!!renaming} initialName={renaming?.name ?? ''} onOpenChange={(o) => !o && setRenaming(null)} onSubmit={doRename} />
+
+      {openAction && (
+        <Modal open onOpenChange={(o) => !o && setOpenAction(null)} title={openAction.label} size="xl">
+          <openAction.Panel
+            cwd={cwd}
+            entries={entries}
+            selection={selectedEntries}
+            api={api}
+            apiFor={apiFor}
+            ui={ui}
+            user={user}
+            close={() => setOpenAction(null)}
+          />
+        </Modal>
+      )}
     </ContentRegion>
   );
 }
