@@ -93,3 +93,13 @@ export const ListOrderedIcon = icon(<><path d="M10 6h10M10 12h10M10 18h10" /><pa
 export const LinkIcon = icon(<><path d="M9 15l6-6" /><path d="M10.5 6.5l.8-.8a4 4 0 0 1 5.7 5.7l-.8.8" /><path d="M13.5 17.5l-.8.8a4 4 0 0 1-5.7-5.7l.8-.8" /></>);
 export const QuoteIcon = icon(<><path d="M5 6h5v5H5z" /><path d="M5 11c0 3 .6 4 3 5" /><path d="M14 6h5v5h-5z" /><path d="M14 11c0 3 .6 4 3 5" /></>);
 export const ClearFormatIcon = icon(<><path d="M8 6h12M13 6l-3.5 9" /><path d="M5 19h6" /><path d="m16 14 5 5M21 14l-5 5" /></>);
+
+// Expand / window controls + editor: alignment, indent, table, rule, image already exists.
+export const MaximizeIcon = icon(<><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M16 3h3a2 2 0 0 1 2 2v3" /><path d="M21 16v3a2 2 0 0 1-2 2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /></>);
+export const AlignLeftIcon = icon(<path d="M4 6h16M4 12h10M4 18h13" />);
+export const AlignCenterIcon = icon(<path d="M4 6h16M7 12h10M5 18h14" />);
+export const AlignRightIcon = icon(<path d="M4 6h16M10 12h10M7 18h13" />);
+export const IndentIcon = icon(<><path d="M8 6h12M8 12h12M8 18h12" /><path d="M3 9l3 3-3 3" /></>);
+export const OutdentIcon = icon(<><path d="M8 6h12M8 12h12M8 18h12" /><path d="M6 9l-3 3 3 3" /></>);
+export const TableIcon = icon(<><rect x="3" y="4" width="18" height="16" rx="1.5" /><path d="M3 10h18M3 15h18M9 4v16M15 4v16" /></>);
+export const MinusIcon = icon(<path d="M5 12h14" />);

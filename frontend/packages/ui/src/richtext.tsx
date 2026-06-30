@@ -1,16 +1,26 @@
-import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { cn } from './lib/cn';
 import { Button, IconButton, Input } from './controls';
+import { DropdownMenu, type MenuItem } from './overlay/menu';
 import {
+  AlignCenterIcon,
+  AlignLeftIcon,
+  AlignRightIcon,
   BoldIcon,
+  ChevronDownIcon,
+  ClearFormatIcon,
+  ImageIcon,
+  IndentIcon,
   ItalicIcon,
-  UnderlineIcon,
-  StrikethroughIcon,
+  LinkIcon,
   ListIcon,
   ListOrderedIcon,
-  LinkIcon,
+  MinusIcon,
+  OutdentIcon,
   QuoteIcon,
-  ClearFormatIcon,
+  StrikethroughIcon,
+  TableIcon,
+  UnderlineIcon,
 } from './icons';
 
 export interface RichTextEditorProps {
@@ -48,11 +58,14 @@ export function RichTextEditor({
   resetKey,
 }: RichTextEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const selRef = useRef<Range | null>(null);
   const [empty, setEmpty] = useState(() => htmlIsBlank(defaultValue));
   const [active, setActive] = useState<Record<string, boolean>>({});
-  const [linkOpen, setLinkOpen] = useState(false);
+  const [bar, setBar] = useState<'none' | 'link' | 'table'>('none');
   const [linkUrl, setLinkUrl] = useState('');
-  const savedRange = useRef<Range | null>(null);
+  const [rows, setRows] = useState(2);
+  const [cols, setCols] = useState(2);
 
   // Load (and reload on resetKey) the initial content. Uncontrolled afterwards so the caret never
   // jumps mid-typing.
@@ -75,6 +88,29 @@ export function RichTextEditor({
     onChange?.(html, text);
   }
 
+  // Preserve the editor selection across toolbar interactions: opening a colour picker or a menu
+  // blurs the editable area, which would otherwise drop the caret so the command applies to nothing.
+  function saveSel() {
+    if (typeof window === 'undefined') return;
+    const s = window.getSelection();
+    if (s && s.rangeCount && ref.current && ref.current.contains(s.anchorNode)) {
+      selRef.current = s.getRangeAt(0).cloneRange();
+    }
+  }
+  function restoreSel() {
+    if (typeof window === 'undefined') return;
+    const s = window.getSelection();
+    if (selRef.current && s) {
+      s.removeAllRanges();
+      s.addRange(selRef.current);
+    }
+  }
+
+  function onSelectionActivity() {
+    saveSel();
+    refreshActive();
+  }
+
   function refreshActive() {
     if (typeof document === 'undefined') return;
     const q = (c: string) => {
@@ -91,12 +127,16 @@ export function RichTextEditor({
       strikeThrough: q('strikeThrough'),
       insertUnorderedList: q('insertUnorderedList'),
       insertOrderedList: q('insertOrderedList'),
+      justifyLeft: q('justifyLeft'),
+      justifyCenter: q('justifyCenter'),
+      justifyRight: q('justifyRight'),
     });
   }
 
   function exec(command: string, value?: string) {
     if (typeof document === 'undefined') return;
     ref.current?.focus();
+    restoreSel();
     try {
       document.execCommand(command, false, value);
     } catch {
@@ -104,6 +144,22 @@ export function RichTextEditor({
     }
     emit();
     refreshActive();
+  }
+
+  // styled applies a colour/size command as INLINE CSS (styleWithCSS) so it survives in the sent
+  // mail (email clients honour inline styles, not a stripped <style> block).
+  function styled(command: string, value: string) {
+    if (typeof document === 'undefined') return;
+    ref.current?.focus();
+    restoreSel();
+    try {
+      document.execCommand('styleWithCSS', false, 'true');
+      document.execCommand(command, false, value);
+      document.execCommand('styleWithCSS', false, 'false');
+    } catch {
+      /* ignore */
+    }
+    emit();
   }
 
   function onPaste(e: ClipboardEvent<HTMLDivElement>) {
@@ -120,23 +176,19 @@ export function RichTextEditor({
     emit();
   }
 
-  function openLink() {
-    const sel = typeof window !== 'undefined' ? window.getSelection() : null;
-    savedRange.current = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
-    setLinkUrl('');
-    setLinkOpen(true);
+  function openBar(which: 'link' | 'table') {
+    saveSel();
+    if (which === 'link') setLinkUrl('');
+    setBar(which);
   }
 
   function applyLink() {
     let url = linkUrl.trim();
     if (url) {
       if (!/^(https?:|mailto:)/i.test(url)) url = 'https://' + url;
-      const sel = window.getSelection();
-      if (savedRange.current && sel) {
-        sel.removeAllRanges();
-        sel.addRange(savedRange.current);
-      }
       ref.current?.focus();
+      restoreSel();
+      const sel = window.getSelection();
       if (sel && sel.isCollapsed) {
         document.execCommand('insertHTML', false, `<a href="${escapeAttr(url)}">${escapeText(url)}</a>`);
       } else {
@@ -144,27 +196,119 @@ export function RichTextEditor({
       }
       emit();
     }
-    setLinkOpen(false);
+    setBar('none');
     setLinkUrl('');
   }
+
+  function chooseImage() {
+    saveSel();
+    fileRef.current?.click();
+  }
+
+  // Embed the picked image inline as a data: URL so the message is self-contained (no separate
+  // attachment plumbing); the data: scheme is permitted by the viewer's CSP and the sanitisers.
+  function onImageChosen(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = String(reader.result || '');
+      if (!url) return;
+      ref.current?.focus();
+      restoreSel();
+      try {
+        document.execCommand('insertImage', false, url);
+      } catch {
+        /* ignore */
+      }
+      emit();
+    };
+    reader.readAsDataURL(f);
+  }
+
+  function insertTable() {
+    const r = Math.max(1, Math.min(20, rows || 1));
+    const c = Math.max(1, Math.min(10, cols || 1));
+    const cell = '<td style="border:1px solid #cfcfcf;padding:6px 8px;min-width:2.5em">&#8203;</td>';
+    let html = '<table style="border-collapse:collapse;margin:4px 0"><tbody>';
+    for (let i = 0; i < r; i++) {
+      html += '<tr>' + cell.repeat(c) + '</tr>';
+    }
+    html += '</tbody></table><p><br></p>';
+    ref.current?.focus();
+    restoreSel();
+    try {
+      document.execCommand('insertHTML', false, html);
+    } catch {
+      /* ignore */
+    }
+    emit();
+    setBar('none');
+  }
+
+  const blockItems: MenuItem[] = [
+    { id: 'p', label: 'Normal text', onSelect: () => exec('formatBlock', 'P') },
+    { id: 'h1', label: 'Title', onSelect: () => exec('formatBlock', 'H1') },
+    { id: 'h2', label: 'Heading', onSelect: () => exec('formatBlock', 'H2') },
+    { id: 'h3', label: 'Subheading', onSelect: () => exec('formatBlock', 'H3') },
+    { id: 'quote', label: 'Quote', onSelect: () => exec('formatBlock', 'BLOCKQUOTE') },
+  ];
+  const sizeItems: MenuItem[] = [
+    { id: 's', label: 'Small', onSelect: () => styled('fontSize', '2') },
+    { id: 'n', label: 'Normal', onSelect: () => styled('fontSize', '3') },
+    { id: 'l', label: 'Large', onSelect: () => styled('fontSize', '5') },
+    { id: 'h', label: 'Huge', onSelect: () => styled('fontSize', '7') },
+  ];
 
   return (
     <div className={cn('flex min-h-0 flex-col overflow-hidden rounded-lg border border-separator bg-surface', className)}>
       <div className="flex flex-wrap items-center gap-0.5 border-b border-separator px-1.5 py-1">
+        <DropdownMenu
+          align="start"
+          items={blockItems}
+          trigger={
+            <Button size="sm" variant="ghost" iconRight={<ChevronDownIcon />} onMouseDown={(e) => e.preventDefault()}>
+              Style
+            </Button>
+          }
+        />
+        <DropdownMenu
+          align="start"
+          items={sizeItems}
+          trigger={
+            <Button size="sm" variant="ghost" iconRight={<ChevronDownIcon />} onMouseDown={(e) => e.preventDefault()}>
+              Size
+            </Button>
+          }
+        />
+        <Separator />
         <Tool icon={<BoldIcon />} label="Bold" active={active.bold} onClick={() => exec('bold')} />
         <Tool icon={<ItalicIcon />} label="Italic" active={active.italic} onClick={() => exec('italic')} />
         <Tool icon={<UnderlineIcon />} label="Underline" active={active.underline} onClick={() => exec('underline')} />
         <Tool icon={<StrikethroughIcon />} label="Strikethrough" active={active.strikeThrough} onClick={() => exec('strikeThrough')} />
         <Separator />
+        <Swatch title="Text colour" defaultValue="#111111" onPick={(v) => styled('foreColor', v)} onOpen={saveSel} />
+        <Swatch title="Highlight colour" defaultValue="#ffe14d" onPick={(v) => styled('hiliteColor', v)} onOpen={saveSel} />
+        <Separator />
         <Tool icon={<ListIcon />} label="Bulleted list" active={active.insertUnorderedList} onClick={() => exec('insertUnorderedList')} />
         <Tool icon={<ListOrderedIcon />} label="Numbered list" active={active.insertOrderedList} onClick={() => exec('insertOrderedList')} />
-        <Tool icon={<QuoteIcon />} label="Quote" onClick={() => exec('formatBlock', 'blockquote')} />
+        <Tool icon={<OutdentIcon />} label="Decrease indent" onClick={() => exec('outdent')} />
+        <Tool icon={<IndentIcon />} label="Increase indent" onClick={() => exec('indent')} />
         <Separator />
-        <Tool icon={<LinkIcon />} label="Insert link" active={linkOpen} onClick={openLink} />
+        <Tool icon={<AlignLeftIcon />} label="Align left" active={active.justifyLeft} onClick={() => exec('justifyLeft')} />
+        <Tool icon={<AlignCenterIcon />} label="Align centre" active={active.justifyCenter} onClick={() => exec('justifyCenter')} />
+        <Tool icon={<AlignRightIcon />} label="Align right" active={active.justifyRight} onClick={() => exec('justifyRight')} />
+        <Separator />
+        <Tool icon={<QuoteIcon />} label="Quote" onClick={() => exec('formatBlock', 'BLOCKQUOTE')} />
+        <Tool icon={<LinkIcon />} label="Insert link" active={bar === 'link'} onClick={() => openBar('link')} />
+        <Tool icon={<ImageIcon />} label="Insert image" onClick={chooseImage} />
+        <Tool icon={<TableIcon />} label="Insert table" active={bar === 'table'} onClick={() => openBar('table')} />
+        <Tool icon={<MinusIcon />} label="Horizontal line" onClick={() => exec('insertHorizontalRule')} />
         <Tool icon={<ClearFormatIcon />} label="Clear formatting" onClick={() => exec('removeFormat')} />
       </div>
 
-      {linkOpen && (
+      {bar === 'link' && (
         <div className="flex items-center gap-2 border-b border-separator px-2 py-1.5">
           <Input
             autoFocus
@@ -176,7 +320,7 @@ export function RichTextEditor({
                 e.preventDefault();
                 applyLink();
               } else if (e.key === 'Escape') {
-                setLinkOpen(false);
+                setBar('none');
               }
             }}
             className="h-8 flex-1"
@@ -184,11 +328,42 @@ export function RichTextEditor({
           <Button size="sm" variant="primary" onMouseDown={(e) => e.preventDefault()} onClick={applyLink}>
             Add link
           </Button>
-          <Button size="sm" variant="ghost" onMouseDown={(e) => e.preventDefault()} onClick={() => setLinkOpen(false)}>
+          <Button size="sm" variant="ghost" onMouseDown={(e) => e.preventDefault()} onClick={() => setBar('none')}>
             Cancel
           </Button>
         </div>
       )}
+
+      {bar === 'table' && (
+        <div className="flex items-center gap-2 border-b border-separator px-2 py-1.5 text-footnote text-text-secondary">
+          <span>Rows</span>
+          <Input
+            type="number"
+            min={1}
+            max={20}
+            value={String(rows)}
+            onChange={(e) => setRows(Number(e.target.value))}
+            className="h-8 w-16"
+          />
+          <span>Columns</span>
+          <Input
+            type="number"
+            min={1}
+            max={10}
+            value={String(cols)}
+            onChange={(e) => setCols(Number(e.target.value))}
+            className="h-8 w-16"
+          />
+          <Button size="sm" variant="primary" onMouseDown={(e) => e.preventDefault()} onClick={insertTable}>
+            Insert table
+          </Button>
+          <Button size="sm" variant="ghost" onMouseDown={(e) => e.preventDefault()} onClick={() => setBar('none')}>
+            Cancel
+          </Button>
+        </div>
+      )}
+
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onImageChosen} />
 
       <div className="relative min-h-0 flex-1">
         <div
@@ -202,9 +377,9 @@ export function RichTextEditor({
           onInput={emit}
           onBlur={emit}
           onPaste={onPaste}
-          onKeyUp={refreshActive}
-          onMouseUp={refreshActive}
-          onFocus={refreshActive}
+          onKeyUp={onSelectionActivity}
+          onMouseUp={onSelectionActivity}
+          onFocus={onSelectionActivity}
           className="holistic-rte h-full overflow-auto px-3 py-2 text-body leading-relaxed text-text-primary outline-none"
           style={{ minHeight, maxHeight }}
         />
@@ -213,6 +388,23 @@ export function RichTextEditor({
         )}
       </div>
     </div>
+  );
+}
+
+// Swatch is a colour-picker toolbar control. It saves the editor selection on open, then applies
+// the chosen colour as an inline style when the value changes.
+function Swatch({ title, defaultValue, onPick, onOpen }: { title: string; defaultValue: string; onPick: (v: string) => void; onOpen: () => void }) {
+  return (
+    <label className="relative inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded hover:bg-fill/10" title={title}>
+      <input
+        type="color"
+        aria-label={title}
+        defaultValue={defaultValue}
+        onMouseDown={onOpen}
+        onChange={(e) => onPick(e.target.value)}
+        className="h-5 w-5 cursor-pointer appearance-none border-0 bg-transparent p-0"
+      />
+    </label>
   );
 }
 

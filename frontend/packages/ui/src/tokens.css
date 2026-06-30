@@ -200,3 +200,12 @@ body {
   color: var(--text-secondary);
 }
 .holistic-rte:focus { outline: none; }
+
+/* RichTextEditor: headings, tables, images, rules — so the WYSIWYG matches what is sent. */
+.holistic-rte h1 { font-size: 1.5em; font-weight: 700; margin: 0.4em 0 0.2em; }
+.holistic-rte h2 { font-size: 1.25em; font-weight: 700; margin: 0.4em 0 0.2em; }
+.holistic-rte h3 { font-size: 1.1em; font-weight: 600; margin: 0.4em 0 0.2em; }
+.holistic-rte img { max-width: 100%; height: auto; }
+.holistic-rte table { border-collapse: collapse; }
+.holistic-rte td, .holistic-rte th { border: 1px solid var(--separator); padding: 6px 8px; min-width: 2.5em; }
+.holistic-rte hr { border: none; border-top: 1px solid var(--separator); margin: 0.7em 0; }
