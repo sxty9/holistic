@@ -185,3 +185,18 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* RichTextEditor content styling — restores list/quote/link rendering inside the contentEditable
+   surface (Tailwind preflight otherwise strips list markers and margins). Scoped to .holistic-rte. */
+.holistic-rte ul { list-style: disc; margin: 0 0 0 1.25rem; padding: 0; }
+.holistic-rte ol { list-style: decimal; margin: 0 0 0 1.25rem; padding: 0; }
+.holistic-rte li { margin: 0.125rem 0; }
+.holistic-rte a { color: rgb(var(--accent) / 1); text-decoration: underline; }
+.holistic-rte b, .holistic-rte strong { font-weight: 600; }
+.holistic-rte blockquote {
+  margin: 0.25rem 0 0.25rem 0.25rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--separator);
+  color: var(--text-secondary);
+}
+.holistic-rte:focus { outline: none; }

@@ -83,3 +83,13 @@ export const EthernetIcon = icon(<><rect x="3" y="8" width="18" height="11" rx="
 
 // Terminal / remote shell.
 export const TerminalIcon = icon(<><rect x="3" y="4" width="18" height="16" rx="2" /><path d="m7 9 3 3-3 3" /><path d="M13 15h4" /></>);
+
+// Rich-text editor toolbar glyphs.
+export const BoldIcon = icon(<path d="M7 5h6.5a3.5 3.5 0 0 1 0 7H7zM7 12h7.5a3.5 3.5 0 0 1 0 7H7z" />);
+export const ItalicIcon = icon(<path d="M11 5h7M6 19h7M14.5 5l-5 14" />);
+export const UnderlineIcon = icon(<><path d="M7 5v6a5 5 0 0 0 10 0V5" /><path d="M5 21h14" /></>);
+export const StrikethroughIcon = icon(<><path d="M5 12h14" /><path d="M8 8.5C8 6.5 9.8 5 12.2 5c1.8 0 3.2.7 3.8 2M16 15c0 2.2-1.9 3.6-4.2 3.6-2 0-3.6-.8-4.3-2.3" /></>);
+export const ListOrderedIcon = icon(<><path d="M10 6h10M10 12h10M10 18h10" /><path d="M4 4.5v3M3 7.5h2M3 11.5h1.6L3 13.5h1.8M3 16.5h1.7M3 18.5h1.7" /></>);
+export const LinkIcon = icon(<><path d="M9 15l6-6" /><path d="M10.5 6.5l.8-.8a4 4 0 0 1 5.7 5.7l-.8.8" /><path d="M13.5 17.5l-.8.8a4 4 0 0 1-5.7-5.7l.8-.8" /></>);
+export const QuoteIcon = icon(<><path d="M5 6h5v5H5z" /><path d="M5 11c0 3 .6 4 3 5" /><path d="M14 6h5v5h-5z" /><path d="M14 11c0 3 .6 4 3 5" /></>);
+export const ClearFormatIcon = icon(<><path d="M8 6h12M13 6l-3.5 9" /><path d="M5 19h6" /><path d="m16 14 5 5M21 14l-5 5" /></>);

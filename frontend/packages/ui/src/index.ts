@@ -87,6 +87,18 @@ export { formatPercent, formatRate, formatDuration } from './lib/format';
 export { useLiveQuery } from './lib/useLiveQuery';
 export type { LiveQuery } from './lib/useLiveQuery';
 
+// Safe email HTML viewer (sandboxed iframe; the only sanctioned way to render untrusted HTML)
+export { SafeHtmlEmail } from './safehtml';
+export type { SafeHtmlEmailProps } from './safehtml';
+
+// Rich-text editor (dependency-free WYSIWYG; emits sanitised HTML + plain text)
+export { RichTextEditor } from './richtext';
+export type { RichTextEditorProps } from './richtext';
+
+// Drag-and-drop nestable navigation tree (reorder + nest by dragging)
+export { TreeNav } from './treenav';
+export type { TreeNavProps, TreeNavNode } from './treenav';
+
 // Files (cloud-style file manager)
 export { FileEntryIcon, Breadcrumb, UploadControl } from './files/parts';
 export type { BreadcrumbSegment } from './files/parts';
