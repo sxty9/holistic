@@ -77,13 +77,7 @@ export function SafeHtmlEmail({
   const [showImages, setShowImages] = useState(false);
   const scheme = useResolvedTheme();
   const hasRemoteImages = useMemo(() => /<img\b[^>]*\bsrc\s*=\s*["']?\s*https?:/i.test(html), [html]);
-  // If the email brings its own background (a designed/newsletter template), render it in LIGHT even
-  // in dark mode: forcing our dark text over the sender's light background would make it invisible
-  // (white-on-white). Plain mail with no background of its own follows the app theme — the common
-  // case that was flashing white before.
-  const ownsBackground = useMemo(() => /\bbgcolor\s*=|\bbackground(?:-color)?\s*:\s*[^;"'>]*\S/i.test(html), [html]);
-  const effectiveScheme: Scheme = scheme === 'dark' && ownsBackground ? 'light' : scheme;
-  const srcDoc = useMemo(() => buildDocument(html, showImages, effectiveScheme), [html, showImages, effectiveScheme]);
+  const srcDoc = useMemo(() => buildDocument(html, showImages, scheme), [html, showImages, scheme]);
 
   if (!html.trim()) return null;
 
@@ -103,15 +97,23 @@ export function SafeHtmlEmail({
         srcDoc={srcDoc}
         referrerPolicy="no-referrer"
         className={cn('w-full rounded-lg border border-separator', fill && 'min-h-0 flex-1')}
-        style={{ height: fill ? undefined : maxHeight, background: palette[effectiveScheme].bg, colorScheme: effectiveScheme }}
+        style={{ height: fill ? undefined : maxHeight, background: palette[scheme].bg, colorScheme: scheme }}
       />
     </div>
   );
 }
 
-/** Wrap sanitised email HTML in a minimal, locked-down, theme-aware document for the iframe. */
+/**
+ * Wrap sanitised email HTML in a minimal, locked-down, theme-aware document for the iframe. In dark
+ * mode the document is authored in light colours and then INVERTED (invert + hue-rotate) so every
+ * email — even one that hardcodes a white background — reads as light-on-dark with no white flash;
+ * media is counter-inverted so images/photos still look correct. Light mode renders normally.
+ */
 function buildDocument(html: string, showImages: boolean, scheme: Scheme): string {
-  const c = palette[scheme];
+  const dark = scheme === 'dark';
+  const c = palette.light; // always author in light; invert handles dark
+  // A light grey that inverts to the app's dark surface (#1c1c1e), so the mail blends into the pane.
+  const bodyBg = dark ? '#e3e3e1' : c.bg;
   const imgSrc = showImages ? 'https: http: data:' : 'data:';
   // default-src 'none' denies scripts, frames, objects, connections, fonts(except data:) and
   // anything not explicitly allowed; the iframe sandbox already blocks script execution outright.
@@ -124,16 +126,22 @@ function buildDocument(html: string, showImages: boolean, scheme: Scheme): strin
     "form-action 'none'",
     "base-uri 'none'",
   ].join('; ');
+  // Smart-invert: flip the whole document, then flip media back so photos/logos render true-colour.
+  const invert = dark
+    ? `html{filter:invert(1) hue-rotate(180deg)}` +
+      `img,video,picture,svg,canvas,iframe,[background],[style*="background-image"]{filter:invert(1) hue-rotate(180deg)}`
+    : '';
   return (
     `<!doctype html><html><head><meta charset="utf-8">` +
     `<meta http-equiv="Content-Security-Policy" content="${csp}">` +
-    `<meta name="color-scheme" content="${scheme}">` +
+    `<meta name="color-scheme" content="light">` +
     `<base target="_blank">` +
-    `<style>:root{color-scheme:${scheme}}html,body{margin:0;padding:12px;background:${c.bg};color:${c.fg};` +
+    `<style>:root{color-scheme:light}html,body{margin:0;padding:12px;background:${bodyBg};color:${c.fg};` +
     `font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;` +
     `word-break:break-word;overflow-wrap:anywhere}` +
     `img{max-width:100%;height:auto}a{color:${c.link}}` +
-    `table{max-width:100%}blockquote{margin:0 0 0 12px;padding-left:12px;border-left:3px solid ${c.rule};color:${c.quote}}</style>` +
+    `table{max-width:100%}blockquote{margin:0 0 0 12px;padding-left:12px;border-left:3px solid ${c.rule};color:${c.quote}}` +
+    `${invert}</style>` +
     `</head><body>${sanitizeEmailHtml(html)}</body></html>`
   );
 }
