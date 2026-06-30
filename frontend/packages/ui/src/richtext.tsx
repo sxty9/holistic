@@ -1,4 +1,13 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import { cn } from './lib/cn';
 import { Button, IconButton, Input } from './controls';
 import { DropdownMenu, type MenuItem } from './overlay/menu';
@@ -58,8 +67,11 @@ export function RichTextEditor({
   resetKey,
 }: RichTextEditorProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const selRef = useRef<Range | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [handle, setHandle] = useState<{ left: number; top: number } | null>(null);
   const [empty, setEmpty] = useState(() => htmlIsBlank(defaultValue));
   const [active, setActive] = useState<Record<string, boolean>>({});
   const [bar, setBar] = useState<'none' | 'link' | 'table'>('none');
@@ -74,6 +86,8 @@ export function RichTextEditor({
     if (!el) return;
     el.innerHTML = sanitizeFragment(defaultValue);
     setEmpty(htmlIsBlank(defaultValue));
+    imgRef.current = null;
+    setHandle(null);
     if (autoFocus) placeCaretAtEnd(el);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
@@ -130,6 +144,7 @@ export function RichTextEditor({
       justifyLeft: q('justifyLeft'),
       justifyCenter: q('justifyCenter'),
       justifyRight: q('justifyRight'),
+      quote: !!blockquoteAncestor(),
     });
   }
 
@@ -174,6 +189,89 @@ export function RichTextEditor({
       /* ignore */
     }
     emit();
+  }
+
+  // ── image resize ──────────────────────────────────────────────────────────────────
+  // Position the drag handle over the selected image's bottom-right corner (getBoundingClientRect
+  // is viewport-relative, so it already accounts for the editor's scroll position).
+  function positionHandle() {
+    const img = imgRef.current;
+    const wrap = wrapRef.current;
+    if (!img || !wrap || !ref.current || !ref.current.contains(img)) {
+      imgRef.current = null;
+      setHandle(null);
+      return;
+    }
+    const ir = img.getBoundingClientRect();
+    const wr = wrap.getBoundingClientRect();
+    setHandle({ left: ir.right - wr.left, top: ir.bottom - wr.top });
+  }
+
+  function onEditorClick(e: { target: EventTarget | null }) {
+    const t = e.target as HTMLElement;
+    if (t && t.tagName === 'IMG') {
+      imgRef.current = t as HTMLImageElement;
+      positionHandle();
+    } else {
+      imgRef.current = null;
+      setHandle(null);
+    }
+  }
+
+  function onHandleDown(e: ReactPointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    const img = imgRef.current;
+    if (!img) return;
+    const startX = e.clientX;
+    const startW = img.getBoundingClientRect().width;
+    const maxW = (ref.current?.clientWidth ?? 1200) - 8;
+    const onMove = (ev: PointerEvent) => {
+      let w = Math.round(startW + (ev.clientX - startX));
+      w = Math.max(40, Math.min(w, maxW));
+      img.removeAttribute('width');
+      img.removeAttribute('height');
+      img.style.width = `${w}px`;
+      img.style.height = 'auto';
+      positionHandle();
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      emit();
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
+  // ── quote toggle ──────────────────────────────────────────────────────────────────
+  function blockquoteAncestor(): HTMLElement | null {
+    if (typeof window === 'undefined') return null;
+    const sel = window.getSelection();
+    let n: Node | null = sel?.anchorNode ?? null;
+    while (n && n !== ref.current) {
+      if (n.nodeType === 1 && (n as HTMLElement).tagName === 'BLOCKQUOTE') return n as HTMLElement;
+      n = n.parentNode;
+    }
+    return null;
+  }
+
+  // toggleQuote wraps the block in a <blockquote>, or unwraps it when the caret is already inside
+  // one (un-quote), moving the quoted content back out to its parent.
+  function toggleQuote() {
+    if (typeof document === 'undefined') return;
+    ref.current?.focus();
+    restoreSel();
+    const bq = blockquoteAncestor();
+    if (bq && bq.parentNode) {
+      const parent = bq.parentNode;
+      while (bq.firstChild) parent.insertBefore(bq.firstChild, bq);
+      parent.removeChild(bq);
+    } else {
+      document.execCommand('formatBlock', false, 'BLOCKQUOTE');
+    }
+    emit();
+    refreshActive();
   }
 
   function openBar(which: 'link' | 'table') {
@@ -300,7 +398,7 @@ export function RichTextEditor({
         <Tool icon={<AlignCenterIcon />} label="Align centre" active={active.justifyCenter} onClick={() => exec('justifyCenter')} />
         <Tool icon={<AlignRightIcon />} label="Align right" active={active.justifyRight} onClick={() => exec('justifyRight')} />
         <Separator />
-        <Tool icon={<QuoteIcon />} label="Quote" onClick={() => exec('formatBlock', 'BLOCKQUOTE')} />
+        <Tool icon={<QuoteIcon />} label="Quote" active={active.quote} onClick={toggleQuote} />
         <Tool icon={<LinkIcon />} label="Insert link" active={bar === 'link'} onClick={() => openBar('link')} />
         <Tool icon={<ImageIcon />} label="Insert image" onClick={chooseImage} />
         <Tool icon={<TableIcon />} label="Insert table" active={bar === 'table'} onClick={() => openBar('table')} />
@@ -365,7 +463,7 @@ export function RichTextEditor({
 
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onImageChosen} />
 
-      <div className="relative min-h-0 flex-1">
+      <div ref={wrapRef} className="relative min-h-0 flex-1">
         <div
           ref={ref}
           contentEditable
@@ -374,9 +472,17 @@ export function RichTextEditor({
           aria-multiline="true"
           aria-label={ariaLabel}
           spellCheck
-          onInput={emit}
+          onInput={() => {
+            emit();
+            if (imgRef.current) {
+              imgRef.current = null;
+              setHandle(null);
+            }
+          }}
           onBlur={emit}
           onPaste={onPaste}
+          onClick={onEditorClick}
+          onScroll={() => imgRef.current && positionHandle()}
           onKeyUp={onSelectionActivity}
           onMouseUp={onSelectionActivity}
           onFocus={onSelectionActivity}
@@ -385,6 +491,14 @@ export function RichTextEditor({
         />
         {empty && (
           <div className="pointer-events-none absolute left-3 top-2 select-none text-body text-text-tertiary">{placeholder}</div>
+        )}
+        {handle && (
+          <div
+            onPointerDown={onHandleDown}
+            className="absolute z-10 h-3 w-3 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize rounded-sm border border-white bg-accent shadow-elev-1"
+            style={{ left: handle.left, top: handle.top }}
+            aria-hidden="true"
+          />
         )}
       </div>
     </div>
