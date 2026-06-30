@@ -96,7 +96,7 @@ export function SafeHtmlEmail({
         sandbox="allow-popups allow-popups-to-escape-sandbox"
         srcDoc={srcDoc}
         referrerPolicy="no-referrer"
-        className={cn('w-full rounded-lg border border-separator', fill && 'min-h-0 flex-1')}
+        className={cn('w-full', fill ? 'min-h-0 flex-1' : 'rounded-lg border border-separator')}
         style={{ height: fill ? undefined : maxHeight, background: palette[scheme].bg, colorScheme: scheme }}
       />
     </div>
