@@ -58,6 +58,9 @@ export type { HoverPanelProps } from './overlay/hovercard';
 export { Marquee } from './marquee';
 export type { MarqueeProps } from './marquee';
 
+export { Autocomplete } from './autocomplete';
+export type { AutocompleteProps, AutocompleteOption } from './autocomplete';
+
 // Shell
 export { AppShell, Sidebar, TopBar, ContentRegion, useTheme } from './shell';
 export type { AppShellProps, SidebarProps, SidebarServiceItem, TopBarProps, ContentRegionProps } from './shell';
@@ -95,6 +98,10 @@ export type { SafeHtmlEmailProps } from './safehtml';
 export { RichTextEditor } from './richtext';
 export type { RichTextEditorProps } from './richtext';
 
+// Markdown + math renderer (escaped React nodes; KaTeX for LaTeX math)
+export { Markdown } from './markdown';
+export type { MarkdownProps } from './markdown';
+
 // Drag-and-drop nestable navigation tree (reorder + nest by dragging)
 export { TreeNav } from './treenav';
 export type { TreeNavProps, TreeNavNode } from './treenav';
@@ -106,6 +113,8 @@ export { FileBrowser, formatBytes, formatDate } from './files/FileBrowser';
 export type { FileBrowserProps, FileActionId } from './files/FileBrowser';
 export { FileToolbar } from './files/FileToolbar';
 export type { FileToolbarProps } from './files/FileToolbar';
+export { registerFolderAction, folderActions } from './files/folderActions';
+export type { FolderAction, FolderActionContext } from './files/folderActions';
 export { NewFolderDialog, RenameDialog, MoveDialog } from './files/dialogs';
 export { FilePreview } from './files/viewers';
 export type { FilePreviewProps, TextPayload } from './files/viewers';

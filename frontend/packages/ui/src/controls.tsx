@@ -1,4 +1,4 @@
-import { forwardRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type MouseEvent as ReactMouseEvent, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { cn } from './lib/cn';
 import { Spinner } from './primitives';
 import { EyeIcon, EyeOffIcon, SearchIcon } from './icons';
@@ -87,8 +87,31 @@ const inputBase =
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean;
 }
-export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ invalid, className, ...rest }, ref) {
-  return <input ref={ref} className={cn(inputBase, 'h-10', invalid && 'border-danger focus:ring-danger/40 focus:border-danger', className)} {...rest} />;
+// Input types that expose a native picker; double-clicking one opens it (see below).
+const PICKER_TYPES = new Set(['date', 'datetime-local', 'month', 'week', 'time']);
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ invalid, className, onDoubleClick, ...rest }, ref) {
+  // Double-clicking a date/time field opens the browser's advanced calendar/time picker (single
+  // click still edits the individual segments). showPicker() needs a user gesture — a double
+  // click qualifies — and is feature-detected + guarded so non-temporal inputs are unaffected.
+  function handleDoubleClick(e: ReactMouseEvent<HTMLInputElement>) {
+    onDoubleClick?.(e);
+    if (!e.defaultPrevented && rest.type && PICKER_TYPES.has(rest.type)) {
+      const el = e.currentTarget as HTMLInputElement & { showPicker?: () => void };
+      try {
+        el.showPicker?.();
+      } catch {
+        /* picker not supported in this browser/context — leave native behaviour */
+      }
+    }
+  }
+  return (
+    <input
+      ref={ref}
+      onDoubleClick={handleDoubleClick}
+      className={cn(inputBase, 'h-10', invalid && 'border-danger focus:ring-danger/40 focus:border-danger', className)}
+      {...rest}
+    />
+  );
 });
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {

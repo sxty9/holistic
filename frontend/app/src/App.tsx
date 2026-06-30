@@ -98,10 +98,12 @@ function Shell({ user, instance, onSignOut, onUserChange }: { user: HolisticUser
     return {
       user,
       api: scopedApi(active.id),
+      apiFor: scopedApi,
       nav: {
         path: subPath,
         navigate: (p: string) => navigate(`/app/${active.id}/${p}`.replace(/\/+$/, '')),
         setTitle,
+        openService: (id: string, p?: string) => navigate(`/app/${id}${p ? `/${p}` : ''}`.replace(/\/+$/, '')),
       },
       ui: { toast, confirm },
       instance,

@@ -51,7 +51,7 @@ function buildBreadcrumb(cwd: string, roots: FileRoot[], rootLabel: (key: string
 const q = (path: string) => encodeURIComponent(path);
 const parentOf = (path: string) => path.split('/').slice(0, -1).join('/');
 
-export function FileManager({ user, api, apiFor, ui }: ServiceContextProps) {
+export function FileManager({ user, api, apiFor, ui, nav }: ServiceContextProps) {
   const t = useT();
   // Folder-level actions other services contribute to the Files toolbar (e.g. aigentic's
   // "Ask AI"). Generic: this component never imports any specific action.
@@ -347,6 +347,7 @@ export function FileManager({ user, api, apiFor, ui }: ServiceContextProps) {
             apiFor={apiFor}
             ui={ui}
             user={user}
+            openService={nav.openService}
             close={() => setOpenAction(null)}
           />
         </Modal>

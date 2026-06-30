@@ -35,6 +35,10 @@ export interface ServiceNavigation {
   path: string; // current sub-path within the service
   navigate(subPath: string): void; // push within the service
   setTitle(title: string | null): void; // updates the TopBar title segment
+  /** Switch to ANOTHER service's tab (deliberate cross-service handoff — e.g. the Files app
+   *  opening aigentic with a seeded conversation). subPath is that service's sub-route; pass
+   *  bulky payloads out-of-band (localStorage / the target's API), not in the path. */
+  openService(serviceId: string, subPath?: string): void;
 }
 
 /** Imperative SDK surfaces the shell owns. */
@@ -58,6 +62,9 @@ export interface InstanceInfo {
 export interface ServiceContextProps {
   user: HolisticUser;
   api: ServiceApiClient;
+  /** A client for any sibling service (base /api/services/<id>/), same auth/CSRF as `api`.
+   *  Enables deliberate cross-service calls — e.g. the Files app invoking aigentic's /run. */
+  apiFor: (serviceId: string) => ServiceApiClient;
   nav: ServiceNavigation;
   ui: ServiceUiBridge;
   instance: InstanceInfo; // runtime domain — single source of truth for services
