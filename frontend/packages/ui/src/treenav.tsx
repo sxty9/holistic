@@ -21,6 +21,8 @@ export interface TreeNavNode {
 export interface TreeNavProps {
   nodes: TreeNavNode[];
   onSelect?: (id: string) => void;
+  /** Double-click a row (e.g. to rename it inline). */
+  onNodeDoubleClick?: (id: string) => void;
   /**
    * Fires when a drag is dropped. `position` is relative to `targetId`: 'inside' nests the dragged
    * node under the target; 'before'/'after' places it as a sibling. The consumer maps this gesture
@@ -45,7 +47,7 @@ export interface TreeNavProps {
  * It is deliberately domain-agnostic — the mail UI translates a move into folder rename/reorder
  * calls. Lives in the SDK because service UIs may not attach raw DnD handlers themselves.
  */
-export function TreeNav({ nodes, onSelect, onMove, rowActions, onExternalDrop, externalDropType, className }: TreeNavProps) {
+export function TreeNav({ nodes, onSelect, onNodeDoubleClick, onMove, rowActions, onExternalDrop, externalDropType, className }: TreeNavProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<{ id: string; pos: TreeNavPosition } | null>(null);
 
@@ -112,6 +114,7 @@ export function TreeNav({ nodes, onSelect, onMove, rowActions, onExternalDrop, e
               role="button"
               tabIndex={0}
               onClick={() => onSelect?.(node.id)}
+              onDoubleClick={() => onNodeDoubleClick?.(node.id)}
               onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
