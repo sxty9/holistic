@@ -29,6 +29,12 @@ export interface TreeNavProps {
   onMove?: (dragId: string, targetId: string, position: TreeNavPosition) => void;
   /** Optional trailing per-row actions (e.g. a context menu); clicks here don't select the row. */
   rowActions?: (node: TreeNavNode) => ReactNode;
+  /**
+   * Accept an EXTERNAL drag (not a node being reordered) dropped onto a row — e.g. messages dragged
+   * from a list onto a folder. Only fires when the drag carries `externalDropType`.
+   */
+  onExternalDrop?: (targetId: string, dataTransfer: DataTransfer) => void;
+  externalDropType?: string;
   className?: string;
 }
 
@@ -39,7 +45,7 @@ export interface TreeNavProps {
  * It is deliberately domain-agnostic — the mail UI translates a move into folder rename/reorder
  * calls. Lives in the SDK because service UIs may not attach raw DnD handlers themselves.
  */
-export function TreeNav({ nodes, onSelect, onMove, rowActions, className }: TreeNavProps) {
+export function TreeNav({ nodes, onSelect, onMove, rowActions, onExternalDrop, externalDropType, className }: TreeNavProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<{ id: string; pos: TreeNavPosition } | null>(null);
 
@@ -48,6 +54,10 @@ export function TreeNav({ nodes, onSelect, onMove, rowActions, className }: Tree
     const y = e.clientY - r.top;
     if (node.droppable && y > r.height * 0.3 && y < r.height * 0.7) return 'inside';
     return y < r.height / 2 ? 'before' : 'after';
+  }
+
+  function isExternalDrag(e: DragEvent<HTMLDivElement>): boolean {
+    return !!onExternalDrop && !!externalDropType && Array.from(e.dataTransfer.types).includes(externalDropType);
   }
 
   return (
@@ -71,14 +81,21 @@ export function TreeNav({ nodes, onSelect, onMove, rowActions, className }: Tree
               }
             }}
             onDragOver={(e) => {
-              if (!dragId || dragId === node.id) return;
-              e.preventDefault();
-              setOver({ id: node.id, pos: positionFor(e, node) });
+              if (dragId && dragId !== node.id) {
+                e.preventDefault();
+                setOver({ id: node.id, pos: positionFor(e, node) });
+              } else if (!dragId && isExternalDrag(e)) {
+                // An external item (e.g. a dragged message) may be dropped INTO any folder.
+                e.preventDefault();
+                setOver({ id: node.id, pos: 'inside' });
+              }
             }}
             onDrop={(e) => {
               e.preventDefault();
               if (dragId && dragId !== node.id && over && over.id === node.id) {
                 onMove?.(dragId, node.id, over.pos);
+              } else if (!dragId && isExternalDrag(e)) {
+                onExternalDrop?.(node.id, e.dataTransfer);
               }
               setDragId(null);
               setOver(null);
