@@ -61,6 +61,11 @@ export type { MarqueeProps } from './marquee';
 export { Autocomplete } from './autocomplete';
 export type { AutocompleteProps, AutocompleteOption } from './autocomplete';
 
+// Contact/recipient picker: avatar-aware multi-select type-ahead used by mail (To/Cc/Bcc) and
+// icaly (attendees), backed by contax's directory via apiFor('contax').
+export { ContactPicker } from './contactpicker';
+export type { ContactPickerProps, ContactOption } from './contactpicker';
+
 // Shell
 export { AppShell, Sidebar, TopBar, ContentRegion, useTheme } from './shell';
 export type { AppShellProps, SidebarProps, SidebarServiceItem, TopBarProps, ContentRegionProps } from './shell';
@@ -107,14 +112,16 @@ export { TreeNav } from './treenav';
 export type { TreeNavProps, TreeNavNode } from './treenav';
 
 // Files (cloud-style file manager)
-export { FileEntryIcon, Breadcrumb, UploadControl } from './files/parts';
-export type { BreadcrumbSegment } from './files/parts';
+export { FileEntryIcon, FileThumb, Breadcrumb, UploadControl } from './files/parts';
+export type { BreadcrumbSegment, FileThumbSources } from './files/parts';
 export { FileBrowser, formatBytes, formatDate } from './files/FileBrowser';
 export type { FileBrowserProps, FileActionId } from './files/FileBrowser';
 export { FileToolbar } from './files/FileToolbar';
 export type { FileToolbarProps } from './files/FileToolbar';
 export { registerFolderAction, folderActions } from './files/folderActions';
 export type { FolderAction, FolderActionContext } from './files/folderActions';
+export { registerViewerAction, viewerActions } from './files/viewerActions';
+export type { FileViewerAction, FileViewerActionContext, FileViewerActionHost } from './files/viewerActions';
 export { NewFolderDialog, RenameDialog, MoveDialog } from './files/dialogs';
 export { FilePreview } from './files/viewers';
 export type { FilePreviewProps, TextPayload } from './files/viewers';

@@ -135,6 +135,44 @@ function Splash() {
   );
 }
 
+const SSO_BOUNCE_KEY = 'h_sso_bounce';
+
+/** Read a validated `return` target from the query string. Open-redirect–safe: the target must be
+ *  on the SAME registrable zone as this dashboard (e.g. *.henrysoase.org) and same protocol, so a
+ *  sibling service like DevLab can bounce the user here to sign in and get sent straight back. */
+function safeReturnUrl(): string | null {
+  try {
+    const raw = new URLSearchParams(window.location.search).get('return');
+    if (!raw) return null;
+    const url = new URL(raw, window.location.origin);
+    if (url.protocol !== window.location.protocol) return null;
+    const host = window.location.hostname;
+    const labels = host.split('.');
+    const zone = labels.length > 2 ? labels.slice(1).join('.') : host;
+    if (url.hostname === host || url.hostname === zone || url.hostname.endsWith('.' + zone)) return url.href;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Send the user back to the return target, exactly once. The one-shot sessionStorage guard breaks
+ *  a redirect loop if the shared cookie isn't yet visible on the sibling subdomain (e.g. a stale
+ *  host-only session mid cookie-domain rollout). Returns true when it navigated away. */
+function returnRedirect(url: string): boolean {
+  try {
+    if (sessionStorage.getItem(SSO_BOUNCE_KEY)) {
+      sessionStorage.removeItem(SSO_BOUNCE_KEY);
+      return false;
+    }
+    sessionStorage.setItem(SSO_BOUNCE_KEY, '1');
+  } catch {
+    /* sessionStorage unavailable — still redirect once below */
+  }
+  window.location.replace(url);
+  return true;
+}
+
 export function App() {
   const [user, setUser] = useState<HolisticUser | null | undefined>(undefined);
   const [view, setView] = useState<'login' | 'register'>('login');
@@ -146,13 +184,29 @@ export function App() {
     mailDomain: '',
   }));
 
+  // A sibling service (e.g. DevLab) can pass ?return=<its url>; after auth we send the user back
+  // there instead of showing this dashboard, so they don't have to re-open it manually.
+  const returnUrl = useMemo(() => safeReturnUrl(), []);
+
+  // Completes auth from the login/register screens: bounce back to the caller if asked, else render
+  // the dashboard. A fresh login just re-issued the shared (domain-scoped) cookie, so the sibling
+  // will see the session.
+  const completeAuth = (u: HolisticUser) => {
+    if (returnUrl && returnRedirect(returnUrl)) return;
+    setUser(u);
+  };
+
   useEffect(() => {
     authApi
       .me()
-      .then(setUser)
+      .then((u) => {
+        // Already signed in and asked to return → go straight back (guarded against a loop).
+        if (returnUrl && returnRedirect(returnUrl)) return;
+        setUser(u);
+      })
       .catch(() => setUser(null));
     instanceApi.get().then(setInstance).catch(() => {});
-  }, []);
+  }, [returnUrl]);
 
   async function signOut() {
     try {
@@ -168,9 +222,9 @@ export function App() {
         <Splash />
       ) : user === null ? (
         view === 'login' ? (
-          <LoginScreen onSuccess={setUser} onRegister={() => setView('register')} />
+          <LoginScreen onSuccess={completeAuth} onRegister={() => setView('register')} />
         ) : (
-          <RegisterScreen onSuccess={setUser} onLogin={() => setView('login')} />
+          <RegisterScreen onSuccess={completeAuth} onLogin={() => setView('login')} />
         )
       ) : (
         <BrowserRouter>

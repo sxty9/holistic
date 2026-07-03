@@ -81,6 +81,10 @@ class Settings:
     user_delete: str = os.environ.get("HOLISTIC_USER_DELETE", "/usr/local/sbin/holistic-user-delete")
 
     cookie_secure: bool = _bool("HOLISTIC_COOKIE_SECURE", True)
+    # When set (e.g. ".henrysoase.org"), session cookies are scoped to the parent domain so
+    # sibling Holistic services on subdomains (e.g. devlab.<zone>) share one sign-in (SSO).
+    # Empty default = host-only cookies (today's behavior); dev/preview unaffected.
+    cookie_domain: str = os.environ.get("HOLISTIC_COOKIE_DOMAIN", "").strip()
 
     max_upload_bytes: int = int(os.environ.get("HOLISTIC_MAX_UPLOAD", str(20 * 1024**3)))
     max_avatar_bytes: int = int(os.environ.get("HOLISTIC_MAX_AVATAR", str(5 * 1024**2)))

@@ -1,4 +1,4 @@
-import type { CSSProperties, ElementType, HTMLAttributes, ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ElementType, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from './lib/cn';
 
 // Literal class maps (never build Tailwind class names dynamically — the scanner needs them whole).
@@ -175,12 +175,20 @@ export function ScrollArea({ className, children, ...rest }: HTMLAttributes<HTML
 
 export function Avatar({ name, src, size = 32, className }: { name: string; src?: string | null; size?: number; className?: string }) {
   const initials = name.trim().slice(0, 2).toUpperCase();
+  // Fall back to initials when the image fails to load — an external contact's Gravatar 404s when
+  // the address has no picture, and a stale avatar URL may 404 too. Reset on every src change.
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
   return (
     <div
       className={cn('inline-flex items-center justify-center overflow-hidden rounded-full bg-accent/15 text-accent font-semibold select-none', className)}
       style={{ width: size, height: size, fontSize: size * 0.4 }}
     >
-      {src ? <img src={src} alt={name} className="h-full w-full object-cover" draggable={false} /> : initials}
+      {src && !failed ? (
+        <img src={src} alt={name} className="h-full w-full object-cover" draggable={false} onError={() => setFailed(true)} />
+      ) : (
+        initials
+      )}
     </div>
   );
 }

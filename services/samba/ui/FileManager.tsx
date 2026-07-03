@@ -24,6 +24,7 @@ import {
   type FileActionId,
   type FileEntry,
   type FileRoot,
+  type FileThumbSources,
   type FolderAction,
   type ServiceContextProps,
   type TextPayload,
@@ -107,6 +108,12 @@ export function FileManager({ user, api, apiFor, ui, nav }: ServiceContextProps)
   const viewable = filtered.filter((e) => e.kind === 'file' && !!e.viewer);
   const previewIdx = preview ? viewable.findIndex((e) => e.path === preview.entry.path) : -1;
   const cutPaths = clipboard?.mode === 'move' ? new Set(clipboard.items.map((i) => i.path)) : undefined;
+  // Let the browser render viewable files inline (image/video thumbnails, text/markdown previews)
+  // instead of type icons. The SDK owns the rendering; we only hand it the content sources.
+  const thumbnails: FileThumbSources = {
+    mediaUrl: (e) => api.url(`fs/raw?path=${q(e.path)}`),
+    loadText: (e) => api.get<TextPayload>(`fs/text?path=${q(e.path)}`),
+  };
 
   function navigate(path: string) {
     setSearch('');
@@ -312,6 +319,7 @@ export function FileManager({ user, api, apiFor, ui, nav }: ServiceContextProps)
                 loading={loading}
                 error={error}
                 cutPaths={cutPaths}
+                thumbnails={thumbnails}
                 onOpen={openEntry}
                 onSelectionChange={setSelection}
                 onAction={handleAction}
@@ -333,6 +341,21 @@ export function FileManager({ user, api, apiFor, ui, nav }: ServiceContextProps)
         onDownload={(e) => download([e])}
         onPrev={previewIdx > 0 ? () => openEntry(viewable[previewIdx - 1]) : undefined}
         onNext={previewIdx >= 0 && previewIdx < viewable.length - 1 ? () => openEntry(viewable[previewIdx + 1]) : undefined}
+        actionHost={{
+          apiFor,
+          ui,
+          user,
+          openService: nav.openService,
+          // Raw bytes of the shown file, from our own fileshare client — the SDK hands these to a
+          // viewer action (e.g. aigentic's "Ask AI") for image/PDF; text rides in the preview payload.
+          loadBytes: preview
+            ? async () => {
+                const res = await api.raw(`fs/raw?path=${q(preview.entry.path)}`);
+                if (!res.ok) throw new Error(t('samba.loadFolderError'));
+                return new Uint8Array(await res.arrayBuffer());
+              }
+            : undefined,
+        }}
       />
       <NewFolderDialog open={newFolderOpen} onOpenChange={setNewFolderOpen} onSubmit={doMkdir} />
       <RenameDialog open={!!renaming} initialName={renaming?.name ?? ''} onOpenChange={(o) => !o && setRenaming(null)} onSubmit={doRename} />
