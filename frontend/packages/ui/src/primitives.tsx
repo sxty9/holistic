@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ElementType, type HTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useEffect, useState, type CSSProperties, type ElementType, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from './lib/cn';
 
 // Literal class maps (never build Tailwind class names dynamically — the scanner needs them whole).
@@ -32,11 +32,14 @@ export interface BoxProps extends HTMLAttributes<HTMLElement> {
   as?: ElementType;
   p?: number;
 }
-export function Box({ as: As = 'div', p, className, style, ...rest }: BoxProps) {
+// forwardRef so Box can be the child of a ref-consuming wrapper — e.g. a Radix `asChild` trigger
+// (ContextMenu/Tooltip), which composes a ref onto its single child. Without this, such a child must
+// be a raw element, which the service-UI lint forbids.
+export const Box = forwardRef<HTMLElement, BoxProps>(function Box({ as: As = 'div', p, className, style, ...rest }, ref) {
   const s: CSSProperties = { ...style };
   if (p) s.padding = `${p * 4}px`;
-  return <As className={className} style={s} {...rest} />;
-}
+  return <As ref={ref} className={className} style={s} {...rest} />;
+});
 
 export interface GridProps extends HTMLAttributes<HTMLDivElement> {
   gap?: number;
@@ -181,7 +184,7 @@ export function Avatar({ name, src, size = 32, className }: { name: string; src?
   useEffect(() => setFailed(false), [src]);
   return (
     <div
-      className={cn('inline-flex items-center justify-center overflow-hidden rounded-full bg-accent/15 text-accent font-semibold select-none', className)}
+      className={cn('inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent/15 text-accent font-semibold select-none', className)}
       style={{ width: size, height: size, fontSize: size * 0.4 }}
     >
       {src && !failed ? (

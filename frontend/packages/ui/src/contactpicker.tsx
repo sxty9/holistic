@@ -6,18 +6,32 @@ import { XIcon } from './icons';
 // A contact as the picker exchanges it: the address is the value that goes on the wire; the rest is
 // display. `username` marks an internal holistic user (populated by contax's lookup). Cross-service
 // hosts (mail To/Cc/Bcc, icaly attendees) wire `onSearch` to apiFor('contax').get('lookup?q=…').
+//
+// A search may also return contax PERSONAL GROUPS (kind:'group', with a groupId and memberCount).
+// A group is never itself added to the value — selecting it calls `onExpandGroup(groupId)` and the
+// resolved member addresses are merged in as ordinary contacts, so the value stays a plain address
+// list. Hosts that don't pass `onExpandGroup` simply never surface groups.
 export interface ContactOption {
   email: string;
   displayName: string;
   avatarUrl?: string | null;
   username?: string;
+  /** 'group' marks a contax personal group (expanded on select); anything else is a contact. */
+  kind?: 'contact' | 'group';
+  /** Group id, present iff kind === 'group'. */
+  groupId?: string;
+  /** Member count, shown as the group option's subtitle. */
+  memberCount?: number;
 }
 
 export interface ContactPickerProps {
   value: ContactOption[];
   onChange: (value: ContactOption[]) => void;
-  /** Async directory search (typically apiFor('contax').get('lookup?q=…')). */
+  /** Async directory search (typically apiFor('contax').get('lookup?q=…')). May include groups. */
   onSearch: (query: string) => Promise<ContactOption[]>;
+  /** Resolve a selected group to its member contacts (typically
+   *  apiFor('contax').get('groups/<id>/members')). Required to surface group options. */
+  onExpandGroup?: (groupId: string) => Promise<ContactOption[]>;
   placeholder?: string;
   disabled?: boolean;
   debounceMs?: number;
@@ -40,6 +54,7 @@ export function ContactPicker({
   value,
   onChange,
   onSearch,
+  onExpandGroup,
   placeholder,
   disabled,
   debounceMs = 250,
@@ -57,6 +72,11 @@ export function ContactPicker({
   // Callback via ref so the debounce effect depends only on the query (callers needn't memoize).
   const searchRef = useRef(onSearch);
   searchRef.current = onSearch;
+  const expandRef = useRef(onExpandGroup);
+  expandRef.current = onExpandGroup;
+  // Latest value, so an async group expansion merges into the current selection, not a stale one.
+  const valueRef = useRef(value);
+  valueRef.current = value;
   const seq = useRef(0);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -103,13 +123,44 @@ export function ContactPicker({
   // Hide options already chosen so the dropdown never offers a duplicate.
   const shown = options.filter((o) => !chosen.has(norm(o.email)));
 
-  function add(opt: ContactOption) {
-    if (!opt.email.trim()) return;
-    if (!chosen.has(norm(opt.email))) onChange([...value, opt]);
+  function resetInput() {
     setQuery('');
     setOptions([]);
     setOpen(false);
     setActive(-1);
+  }
+
+  function add(opt: ContactOption) {
+    if (opt.kind === 'group') {
+      if (opt.groupId) void addGroup(opt.groupId);
+      resetInput();
+      return;
+    }
+    if (!opt.email.trim()) return;
+    if (!chosen.has(norm(opt.email))) onChange([...value, opt]);
+    resetInput();
+  }
+
+  // addGroup expands a selected group into its members and merges the (email-deduped) members into
+  // the current value. The group itself is never added — the value stays a plain address list.
+  async function addGroup(groupId: string) {
+    const expand = expandRef.current;
+    if (!expand) return;
+    try {
+      const members = await expand(groupId);
+      const merged = [...valueRef.current];
+      const have = new Set(merged.map((v) => norm(v.email)));
+      for (const m of members) {
+        const e = norm(m.email);
+        if (e && !have.has(e)) {
+          have.add(e);
+          merged.push(m);
+        }
+      }
+      onChange(merged);
+    } catch {
+      // Expansion failed — leave the current selection unchanged.
+    }
   }
 
   function removeAt(i: number) {
@@ -195,7 +246,7 @@ export function ContactPicker({
             <li className="px-3 py-2 text-footnote text-text-tertiary">{emptyText}</li>
           ) : (
             shown.map((o, i) => (
-              <li key={(o.username || norm(o.email)) + i}>
+              <li key={(o.groupId || o.username || norm(o.email)) + i}>
                 <button
                   type="button"
                   onClick={() => add(o)}
@@ -208,7 +259,9 @@ export function ContactPicker({
                   <Avatar name={o.displayName || o.email} src={o.avatarUrl || undefined} size={28} />
                   <span className="flex min-w-0 flex-col">
                     <span className="truncate text-subhead text-text-primary">{o.displayName || o.email}</span>
-                    <span className="truncate text-footnote text-text-secondary">{o.email}</span>
+                    <span className="truncate text-footnote text-text-secondary">
+                      {o.kind === 'group' ? `Gruppe · ${o.memberCount ?? 0} Mitglieder` : o.email}
+                    </span>
                   </span>
                 </button>
               </li>

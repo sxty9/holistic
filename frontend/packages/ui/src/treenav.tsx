@@ -1,5 +1,6 @@
 import { useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { cn } from './lib/cn';
+import { ContextMenu, type MenuItem } from './overlay/menu';
 
 export type TreeNavPosition = 'before' | 'after' | 'inside';
 
@@ -32,6 +33,12 @@ export interface TreeNavProps {
   /** Optional trailing per-row actions (e.g. a context menu); clicks here don't select the row. */
   rowActions?: (node: TreeNavNode) => ReactNode;
   /**
+   * Optional right-click context menu for a row. Return the menu items for `node`; an empty array
+   * means "no menu" and the row falls back to the browser's native menu. Composes with rowActions,
+   * so a row may offer both a hover affordance and a right-click menu with the same actions.
+   */
+  nodeContextMenu?: (node: TreeNavNode) => MenuItem[];
+  /**
    * Accept an EXTERNAL drag (not a node being reordered) dropped onto a row — e.g. messages dragged
    * from a list onto a folder. Only fires when the drag carries `externalDropType`.
    */
@@ -47,7 +54,7 @@ export interface TreeNavProps {
  * It is deliberately domain-agnostic — the mail UI translates a move into folder rename/reorder
  * calls. Lives in the SDK because service UIs may not attach raw DnD handlers themselves.
  */
-export function TreeNav({ nodes, onSelect, onNodeDoubleClick, onMove, rowActions, onExternalDrop, externalDropType, className }: TreeNavProps) {
+export function TreeNav({ nodes, onSelect, onNodeDoubleClick, onMove, rowActions, nodeContextMenu, onExternalDrop, externalDropType, className }: TreeNavProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<{ id: string; pos: TreeNavPosition } | null>(null);
 
@@ -66,6 +73,37 @@ export function TreeNav({ nodes, onSelect, onNodeDoubleClick, onMove, rowActions
     <div className={cn('flex flex-col gap-0.5', className)} role="tree">
       {nodes.map((node) => {
         const indicate = over && over.id === node.id ? over.pos : null;
+        const menuItems = nodeContextMenu?.(node) ?? [];
+        const rowButton = (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onSelect?.(node.id)}
+            onDoubleClick={() => onNodeDoubleClick?.(node.id)}
+            onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect?.(node.id);
+              }
+            }}
+            className={cn(
+              'group flex cursor-pointer items-center gap-2 rounded-lg py-1.5 pr-1.5 text-footnote transition-colors',
+              node.active ? 'bg-accent/15 font-medium text-text-primary' : 'text-text-secondary hover:bg-fill/10',
+              dragId === node.id && 'opacity-40',
+              indicate === 'inside' && 'ring-2 ring-inset ring-accent',
+            )}
+            style={{ paddingLeft: 8 + (node.depth ?? 0) * 16 }}
+          >
+            {node.icon && <span className="shrink-0 text-text-tertiary">{node.icon}</span>}
+            <span className="min-w-0 flex-1 truncate">{node.label}</span>
+            {node.badge}
+            {rowActions && (
+              <span className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100" onClick={(e) => e.stopPropagation()}>
+                {rowActions(node)}
+              </span>
+            )}
+          </div>
+        );
         return (
           <div
             key={node.id}
@@ -110,34 +148,7 @@ export function TreeNav({ nodes, onSelect, onNodeDoubleClick, onMove, rowActions
           >
             {indicate === 'before' && <div className="pointer-events-none absolute inset-x-1 top-0 z-10 h-0.5 rounded bg-accent" />}
             {indicate === 'after' && <div className="pointer-events-none absolute inset-x-1 bottom-0 z-10 h-0.5 rounded bg-accent" />}
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => onSelect?.(node.id)}
-              onDoubleClick={() => onNodeDoubleClick?.(node.id)}
-              onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onSelect?.(node.id);
-                }
-              }}
-              className={cn(
-                'group flex cursor-pointer items-center gap-2 rounded-lg py-1.5 pr-1.5 text-footnote transition-colors',
-                node.active ? 'bg-accent/15 font-medium text-text-primary' : 'text-text-secondary hover:bg-fill/10',
-                dragId === node.id && 'opacity-40',
-                indicate === 'inside' && 'ring-2 ring-inset ring-accent',
-              )}
-              style={{ paddingLeft: 8 + (node.depth ?? 0) * 16 }}
-            >
-              {node.icon && <span className="shrink-0 text-text-tertiary">{node.icon}</span>}
-              <span className="min-w-0 flex-1 truncate">{node.label}</span>
-              {node.badge}
-              {rowActions && (
-                <span className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100" onClick={(e) => e.stopPropagation()}>
-                  {rowActions(node)}
-                </span>
-              )}
-            </div>
+            {menuItems.length > 0 ? <ContextMenu items={menuItems}>{rowButton}</ContextMenu> : rowButton}
           </div>
         );
       })}

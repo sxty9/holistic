@@ -61,6 +61,11 @@ export type { MarqueeProps } from './marquee';
 export { Autocomplete } from './autocomplete';
 export type { AutocompleteProps, AutocompleteOption } from './autocomplete';
 
+// Global notification centre (top-bar bell): live, cross-service notifications backed by the
+// notify service via apiFor('notify'). Rendered by the app shell, available on every tab.
+export { NotificationCenter } from './notificationcenter';
+export type { NotificationCenterProps, NotificationItem } from './notificationcenter';
+
 // Contact/recipient picker: avatar-aware multi-select type-ahead used by mail (To/Cc/Bcc) and
 // icaly (attendees), backed by contax's directory via apiFor('contax').
 export { ContactPicker } from './contactpicker';
@@ -109,7 +114,7 @@ export type { MarkdownProps } from './markdown';
 
 // Drag-and-drop nestable navigation tree (reorder + nest by dragging)
 export { TreeNav } from './treenav';
-export type { TreeNavProps, TreeNavNode } from './treenav';
+export type { TreeNavProps, TreeNavNode, TreeNavPosition } from './treenav';
 
 // Files (cloud-style file manager)
 export { FileEntryIcon, FileThumb, Breadcrumb, UploadControl } from './files/parts';
