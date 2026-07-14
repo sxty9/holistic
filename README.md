@@ -119,6 +119,43 @@ per user). Enforce with `isAdmin || group ∈ user.groups` either way. The TypeS
 shapes are `PermissionManifest`/`PermissionCategory`/`PermissionDecl` in
 `@holistic/ui`. Validate with `holistic perms validate`.
 
+## Declare configuration (config standard)
+
+The exact mirror of the rights standard, for settings instead of rights. **All**
+configuration — anything an admin sets — is bundled in the dashboard's single
+**Configuration** tab, never in a service's own tab: a service tab belongs to the user's
+experience and must not drown in knobs.
+
+A service *declares* its settings and their defaults in a manifest dropped at install time
+to `/etc/holistic/config.d/<id>.json` (like its permissions drop-in):
+
+```jsonc
+{
+  "service": "hosuto", "version": 1,
+  "categories": [{
+    "id": "limits", "label": "Limits",
+    "settings": [
+      { "id": "maxServersPerUser", "label": "Servers per member", "type": "int", "default": 3 },
+      { "id": "loader", "label": "Default loader", "type": "enum",
+        "default": "paper", "options": ["vanilla", "fabric", "paper"] }
+    ]
+  }]
+}
+```
+
+An admin edits the values there; the dashboard validates them against the manifest and
+writes `/var/lib/holistic/config/<id>.json` atomically (mode `0640`, group `holistic`).
+Every service daemon simply **reads that file live** — no restart, no RPC — and falls back
+to its declared default for anything absent, so a host that has never been configured
+behaves exactly as before.
+
+Rules: the service id must match `^[a-z][a-z0-9]{2,19}$` and equal the file stem (it is the
+same id as the plugin and the permissions manifest); setting ids match
+`^[a-z][a-zA-Z0-9_]*$` and are unique per service (the daemon reads them by bare id);
+`type` is one of `string`, `int`, `bool`, `enum`, `secret`; an `enum` needs a non-empty
+`options[]` containing its default; `dangerous: true` makes the editor confirm before
+saving. Validate with `holistic config validate`.
+
 ## Layout
 
 ```

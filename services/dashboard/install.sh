@@ -88,6 +88,15 @@ install -d -o holistic -g holistic -m 0755 /etc/holistic/permissions.d
 install -m 0644 "$HERE/permissions/samba.json" /etc/holistic/permissions.d/samba.json
 python3 "$HERE/lib/holistic-perms.py" ensure-groups /etc/holistic/permissions.d
 
+# Configuration standard (the mirror of the rights standard): services DECLARE their settings
+# in config.d drop-ins; the dashboard's Configuration tab WRITES the admin-set values, one file
+# per service, into /var/lib/holistic/config — which every service daemon (group `holistic`)
+# reads live. Only the two directories belong to the dashboard; the manifests are the services'.
+echo "[dashboard] preparing configuration drop-ins..."
+install -d -o holistic -g holistic -m 0755 /etc/holistic/config.d
+install -d -o holistic -g holistic -m 0750 /var/lib/holistic/config
+python3 "$HERE/lib/holistic-config.py" validate /etc/holistic/config.d
+
 echo "[dashboard] configuring Caddy..."
 install -d /etc/caddy
 install -d /etc/caddy/conf.d   # drop-in dir for per-service routes (e.g. hostek); imported by the Caddyfile

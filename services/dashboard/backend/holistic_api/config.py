@@ -57,6 +57,16 @@ class Settings:
 
     invites_path: str = os.environ.get("HOLISTIC_INVITES", "/var/lib/holistic/invites.json")
     revoked_path: str = os.environ.get("HOLISTIC_REVOKED", "/var/lib/holistic/revoked.json")
+    # Configuration standard (the mirror of the rights standard, see services/config/router.py):
+    #   config_manifests_dir — services DECLARE their settings + defaults here, one drop-in per
+    #                          service (read-only to the dashboard), like permissions.d.
+    #   config_values_dir    — the dashboard WRITES the admin-set values here, one file per
+    #                          service; every service daemon reads its file live.
+    #   config_group         — the Unix group shared by dashboard + daemons; values are 0640
+    #                          root-of-trust files readable by exactly that group (secrets!).
+    config_manifests_dir: str = os.environ.get("HOLISTIC_CONFIG_DIR", "/etc/holistic/config.d")
+    config_values_dir: str = os.environ.get("HOLISTIC_CONFIG_VALUES", "/var/lib/holistic/config")
+    config_group: str = os.environ.get("HOLISTIC_CONFIG_GROUP", "holistic")
     # Runtime domain awareness (see instance.py). All optional → zero-config: empty means
     # "derive from the incoming request". holistic is served same-origin behind Caddy on
     # whatever domain the operator points at it, so the public origin/host is read live from
