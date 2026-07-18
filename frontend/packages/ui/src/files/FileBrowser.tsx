@@ -5,7 +5,7 @@ import { ContextMenu, type MenuItem } from '../overlay/menu';
 import { CopyIcon, DownloadIcon, FolderIcon, InfoIcon, MoveIcon, PencilIcon, TrashIcon } from '../icons';
 import { useT } from '../i18n';
 import type { FileEntry } from '../plugin/contract';
-import { FileEntryIcon } from './parts';
+import { FileThumb, type FileThumbSources } from './parts';
 
 export type FileActionId = 'open' | 'download' | 'rename' | 'move' | 'copy' | 'delete' | 'info' | 'newFolder' | 'upload';
 
@@ -17,6 +17,8 @@ export interface FileBrowserProps {
   error?: string | null;
   /** Paths shown dimmed (e.g. items queued to be moved). */
   cutPaths?: Set<string>;
+  /** Enables live thumbnails/previews for viewable files; omit to keep plain type icons. */
+  thumbnails?: FileThumbSources;
   onOpen: (entry: FileEntry) => void;
   onSelectionChange: (selection: Set<string>) => void;
   onAction: (action: FileActionId, entries: FileEntry[]) => void;
@@ -57,7 +59,7 @@ function ColumnResizeHandle({ onPointerDown }: { onPointerDown: (e: ReactPointer
   );
 }
 
-export function FileBrowser({ entries, view, selection, loading, error, cutPaths, onOpen, onSelectionChange, onAction, emptyAction }: FileBrowserProps) {
+export function FileBrowser({ entries, view, selection, loading, error, cutPaths, thumbnails, onOpen, onSelectionChange, onAction, emptyAction }: FileBrowserProps) {
   const t = useT();
   // Index of the last clicked item — the anchor for shift-range selection.
   const anchor = useRef<number | null>(null);
@@ -133,9 +135,8 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
   function contextItems(entry: FileEntry): MenuItem[] {
     const targets = targetFor(entry);
     const single = targets.length === 1;
-    const onlyFiles = targets.every((t) => t.kind === 'file');
     const items: MenuItem[] = [{ id: 'open', label: t('common.open'), icon: <FolderIcon />, onSelect: () => onOpen(entry) }];
-    if (onlyFiles) items.push({ id: 'download', label: t('common.download'), icon: <DownloadIcon />, onSelect: () => onAction('download', targets) });
+    items.push({ id: 'download', label: t('common.download'), icon: <DownloadIcon />, onSelect: () => onAction('download', targets) });
     if (single) items.push({ id: 'rename', label: t('common.rename'), icon: <PencilIcon />, onSelect: () => onAction('rename', targets) });
     items.push({ id: 'copy', label: t('common.copy'), icon: <CopyIcon />, onSelect: () => onAction('copy', targets) });
     items.push({ id: 'move', label: t('common.move'), icon: <MoveIcon />, onSelect: () => onAction('move', targets) });
@@ -169,13 +170,15 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
               onDoubleClick={() => onOpen(entry)}
               onContextMenu={() => ensureSelected(entry)}
               className={cn(
-                'group flex aspect-square flex-col items-center justify-center gap-2 rounded-md p-3 text-center transition-colors',
+                'group flex aspect-square flex-col rounded-md p-2 text-center transition-colors',
                 selection.has(entry.path) ? 'bg-accent/15 ring-1 ring-accent/40' : 'hover:bg-fill/10',
                 cutPaths?.has(entry.path) && 'opacity-40',
               )}
             >
-              <FileEntryIcon entry={entry} className="h-12 w-12" />
-              <span className="w-full truncate text-footnote text-text-primary">{entry.name}</span>
+              <div className="flex min-h-0 w-full flex-1 items-center justify-center">
+                <FileThumb entry={entry} sources={thumbnails} withText iconClassName="h-12 w-12" />
+              </div>
+              <span className="mt-1.5 w-full truncate text-footnote text-text-primary">{entry.name}</span>
             </button>
           </ContextMenu>
         ))}
@@ -216,7 +219,9 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
             style={LIST_TEMPLATE}
           >
             <span className="flex items-center gap-2.5 min-w-0">
-              <FileEntryIcon entry={entry} className="h-5 w-5 shrink-0" />
+              <span className="h-6 w-6 shrink-0">
+                <FileThumb entry={entry} sources={thumbnails} iconClassName="h-5 w-5" className="rounded-sm" />
+              </span>
               <span className="truncate text-subhead text-text-primary">{entry.name}</span>
             </span>
             <span className="text-right text-footnote text-text-secondary tabular-nums">{entry.kind === 'dir' ? '—' : formatBytes(entry.size)}</span>

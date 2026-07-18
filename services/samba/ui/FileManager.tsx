@@ -7,6 +7,7 @@ import {
   FileBrowser,
   FilePreview,
   FileToolbar,
+  Modal,
   MoveIcon,
   NewFolderDialog,
   Panel,
@@ -15,6 +16,7 @@ import {
   Stack,
   Text,
   UploadControl,
+  folderActions,
   formatBytes,
   formatDate,
   useT,
@@ -22,6 +24,8 @@ import {
   type FileActionId,
   type FileEntry,
   type FileRoot,
+  type FileThumbSources,
+  type FolderAction,
   type ServiceContextProps,
   type TextPayload,
 } from '@holistic/ui';
@@ -47,9 +51,16 @@ function buildBreadcrumb(cwd: string, roots: FileRoot[], rootLabel: (key: string
 
 const q = (path: string) => encodeURIComponent(path);
 const parentOf = (path: string) => path.split('/').slice(0, -1).join('/');
+// Ceiling for the bundled-download URL. Servers and proxies cap the request line (commonly
+// 8 KB); staying under that turns an opaque truncation into a clear message.
+const MAX_DOWNLOAD_URL = 6000;
 
-export function FileManager({ user, api, ui }: ServiceContextProps) {
+export function FileManager({ user, api, apiFor, ui, nav }: ServiceContextProps) {
   const t = useT();
+  // Folder-level actions other services contribute to the Files toolbar (e.g. aigentic's
+  // "Ask AI"). Generic: this component never imports any specific action.
+  const extraActions = folderActions().filter((a) => !a.visible || a.visible(user));
+  const [openAction, setOpenAction] = useState<FolderAction | null>(null);
   // The server returns English drive labels ("My Drive", "Family"); map the known
   // share keys to the active language, falling back to whatever the server sent.
   const rootLabel = (key: string, fallback: string) =>
@@ -96,22 +107,50 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
   const canGoUp = cwd.includes('/'); // false at a share root — nothing above it
   const filtered = search ? entries.filter((e) => e.name.toLowerCase().includes(search.toLowerCase())) : entries;
   const selectedEntries = entries.filter((e) => selection.has(e.path));
+  // Viewable items in the current view, for the preview's prev/next navigation.
+  const viewable = filtered.filter((e) => e.kind === 'file' && !!e.viewer);
+  const previewIdx = preview ? viewable.findIndex((e) => e.path === preview.entry.path) : -1;
   const cutPaths = clipboard?.mode === 'move' ? new Set(clipboard.items.map((i) => i.path)) : undefined;
+  // Let the browser render viewable files inline (image/video thumbnails, text/markdown previews)
+  // instead of type icons. The SDK owns the rendering; we only hand it the content sources.
+  const thumbnails: FileThumbSources = {
+    mediaUrl: (e) => api.url(`fs/raw?path=${q(e.path)}`),
+    loadText: (e) => api.get<TextPayload>(`fs/text?path=${q(e.path)}`),
+  };
 
   function navigate(path: string) {
     setSearch('');
     setCwd(path);
   }
 
+  function saveAs(href: string, filename: string) {
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   function download(items: FileEntry[]) {
-    for (const it of items) {
-      const a = document.createElement('a');
-      a.href = api.url(`fs/download?path=${q(it.path)}`);
-      a.download = it.name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+    if (items.length === 0) return;
+    if (items.length === 1) {
+      const [it] = items;
+      // A lone file streams as-is; a lone folder comes back as a ZIP the server builds live.
+      saveAs(api.url(`fs/download?path=${q(it.path)}`), it.kind === 'dir' ? `${it.name}.zip` : it.name);
+      return;
     }
+    // Several items — one ZIP. They always come from the current listing, so the request is
+    // "this folder + these names" instead of N full paths; that keeps the URL short.
+    const dirName = cwd.includes('/') ? cwd.slice(cwd.lastIndexOf('/') + 1) : rootLabel(cwd, cwd);
+    const href = api.url(`fs/archive?path=${q(cwd)}${items.map((i) => `&name=${q(i.name)}`).join('')}`);
+    // This is a GET, so the whole selection has to survive as a URL. Refuse loudly rather than
+    // fire a request the proxy would cut short.
+    if (href.length > MAX_DOWNLOAD_URL) {
+      ui.toast({ title: t('samba.tooManySelected'), description: t('samba.tooManySelectedHint'), variant: 'error' });
+      return;
+    }
+    saveAs(href, `${dirName}.zip`);
   }
 
   async function openEntry(entry: FileEntry) {
@@ -147,7 +186,7 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
   }
 
   function handleAction(action: FileActionId, targets: FileEntry[]) {
-    if (action === 'download') download(targets.filter((t) => t.kind === 'file'));
+    if (action === 'download') download(targets);
     else if (action === 'rename') setRenaming(targets[0]);
     else if (action === 'move') {
       setClipboard({ mode: 'move', items: targets });
@@ -250,6 +289,21 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
               onNewFolder={() => setNewFolderOpen(true)}
               onUpload={doUpload}
               onAction={handleAction}
+              actions={
+                extraActions.length > 0
+                  ? extraActions.map((a) => (
+                      <Button
+                        key={a.id}
+                        variant="secondary"
+                        size="sm"
+                        iconLeft={a.icon ? <a.icon className="h-4 w-4" /> : undefined}
+                        onClick={() => setOpenAction(a)}
+                      >
+                        {a.label}
+                      </Button>
+                    ))
+                  : undefined
+              }
             />
 
             {clipboard && (
@@ -287,6 +341,7 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
                 loading={loading}
                 error={error}
                 cutPaths={cutPaths}
+                thumbnails={thumbnails}
                 onOpen={openEntry}
                 onSelectionChange={setSelection}
                 onAction={handleAction}
@@ -306,9 +361,42 @@ export function FileManager({ user, api, ui }: ServiceContextProps) {
         text={preview?.text}
         onOpenChange={(o) => !o && setPreview(null)}
         onDownload={(e) => download([e])}
+        onPrev={previewIdx > 0 ? () => openEntry(viewable[previewIdx - 1]) : undefined}
+        onNext={previewIdx >= 0 && previewIdx < viewable.length - 1 ? () => openEntry(viewable[previewIdx + 1]) : undefined}
+        actionHost={{
+          apiFor,
+          ui,
+          user,
+          openService: nav.openService,
+          // Raw bytes of the shown file, from our own fileshare client — the SDK hands these to a
+          // viewer action (e.g. aigentic's "Ask AI") for image/PDF; text rides in the preview payload.
+          loadBytes: preview
+            ? async () => {
+                const res = await api.raw(`fs/raw?path=${q(preview.entry.path)}`);
+                if (!res.ok) throw new Error(t('samba.loadFolderError'));
+                return new Uint8Array(await res.arrayBuffer());
+              }
+            : undefined,
+        }}
       />
       <NewFolderDialog open={newFolderOpen} onOpenChange={setNewFolderOpen} onSubmit={doMkdir} />
       <RenameDialog open={!!renaming} initialName={renaming?.name ?? ''} onOpenChange={(o) => !o && setRenaming(null)} onSubmit={doRename} />
+
+      {openAction && (
+        <Modal open onOpenChange={(o) => !o && setOpenAction(null)} title={openAction.label} size="xl">
+          <openAction.Panel
+            cwd={cwd}
+            entries={entries}
+            selection={selectedEntries}
+            api={api}
+            apiFor={apiFor}
+            ui={ui}
+            user={user}
+            openService={nav.openService}
+            close={() => setOpenAction(null)}
+          />
+        </Modal>
+      )}
     </ContentRegion>
   );
 }

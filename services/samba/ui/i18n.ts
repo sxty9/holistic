@@ -42,6 +42,8 @@ registerMessages({
     'samba.clipboardCopy': (v) => `Copying ${v.what} — go to a folder, then paste.`,
     'samba.moveHere': 'Move here',
     'samba.copyHere': 'Copy here',
+    'samba.tooManySelected': 'Too many items selected',
+    'samba.tooManySelectedHint': 'Select fewer items, or download the whole folder instead.',
   },
 
   de: {
@@ -82,6 +84,8 @@ registerMessages({
     'samba.clipboardCopy': (v) => `${v.what} wird kopiert — gehe zu einem Ordner und füge dann ein.`,
     'samba.moveHere': 'Hierher verschieben',
     'samba.copyHere': 'Hierher kopieren',
+    'samba.tooManySelected': 'Zu viele Objekte ausgewählt',
+    'samba.tooManySelectedHint': 'Wähle weniger Objekte aus oder lade den ganzen Ordner herunter.',
   },
 
   ja: {
@@ -122,5 +126,7 @@ registerMessages({
     'samba.clipboardCopy': (v) => `${v.what} をコピー中 — フォルダを開いて貼り付けてください。`,
     'samba.moveHere': 'ここに移動',
     'samba.copyHere': 'ここにコピー',
+    'samba.tooManySelected': '選択した項目が多すぎます',
+    'samba.tooManySelectedHint': '項目を減らすか、フォルダ全体をダウンロードしてください。',
   },
 });

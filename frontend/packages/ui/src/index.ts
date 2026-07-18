@@ -32,6 +32,7 @@ export {
   IconButton,
   Input,
   PasswordInput,
+  Textarea,
   Field,
   SegmentedControl,
   SearchField,
@@ -39,7 +40,7 @@ export {
   Switch,
   InlineLink,
 } from './controls';
-export type { ButtonProps, IconButtonProps, InputProps, FieldProps, SegmentedOption } from './controls';
+export type { ButtonProps, IconButtonProps, InputProps, TextareaProps, FieldProps, SegmentedOption } from './controls';
 
 // Overlays
 export { Modal, Sheet } from './overlay/modal';
@@ -56,6 +57,19 @@ export { HoverPanel } from './overlay/hovercard';
 export type { HoverPanelProps } from './overlay/hovercard';
 export { Marquee } from './marquee';
 export type { MarqueeProps } from './marquee';
+
+export { Autocomplete } from './autocomplete';
+export type { AutocompleteProps, AutocompleteOption } from './autocomplete';
+
+// Global notification centre (top-bar bell): live, cross-service notifications backed by the
+// notify service via apiFor('notify'). Rendered by the app shell, available on every tab.
+export { NotificationCenter } from './notificationcenter';
+export type { NotificationCenterProps, NotificationItem } from './notificationcenter';
+
+// Contact/recipient picker: avatar-aware multi-select type-ahead used by mail (To/Cc/Bcc) and
+// icaly (attendees), backed by contax's directory via apiFor('contax').
+export { ContactPicker } from './contactpicker';
+export type { ContactPickerProps, ContactOption } from './contactpicker';
 
 // Shell
 export { AppShell, Sidebar, TopBar, ContentRegion, useTheme } from './shell';
@@ -86,13 +100,33 @@ export { formatPercent, formatRate, formatDuration } from './lib/format';
 export { useLiveQuery } from './lib/useLiveQuery';
 export type { LiveQuery } from './lib/useLiveQuery';
 
+// Safe email HTML viewer (sandboxed iframe; the only sanctioned way to render untrusted HTML)
+export { SafeHtmlEmail } from './safehtml';
+export type { SafeHtmlEmailProps } from './safehtml';
+
+// Rich-text editor (dependency-free WYSIWYG; emits sanitised HTML + plain text)
+export { RichTextEditor } from './richtext';
+export type { RichTextEditorProps } from './richtext';
+
+// Markdown + math renderer (escaped React nodes; KaTeX for LaTeX math)
+export { Markdown } from './markdown';
+export type { MarkdownProps } from './markdown';
+
+// Drag-and-drop nestable navigation tree (reorder + nest by dragging)
+export { TreeNav } from './treenav';
+export type { TreeNavProps, TreeNavNode, TreeNavPosition } from './treenav';
+
 // Files (cloud-style file manager)
-export { FileEntryIcon, Breadcrumb, UploadControl } from './files/parts';
-export type { BreadcrumbSegment } from './files/parts';
+export { FileEntryIcon, FileThumb, Breadcrumb, UploadControl } from './files/parts';
+export type { BreadcrumbSegment, FileThumbSources } from './files/parts';
 export { FileBrowser, formatBytes, formatDate } from './files/FileBrowser';
 export type { FileBrowserProps, FileActionId } from './files/FileBrowser';
 export { FileToolbar } from './files/FileToolbar';
 export type { FileToolbarProps } from './files/FileToolbar';
+export { registerFolderAction, folderActions } from './files/folderActions';
+export type { FolderAction, FolderActionContext } from './files/folderActions';
+export { registerViewerAction, viewerActions } from './files/viewerActions';
+export type { FileViewerAction, FileViewerActionContext, FileViewerActionHost } from './files/viewerActions';
 export { NewFolderDialog, RenameDialog, MoveDialog } from './files/dialogs';
 export { FilePreview } from './files/viewers';
 export type { FilePreviewProps, TextPayload } from './files/viewers';

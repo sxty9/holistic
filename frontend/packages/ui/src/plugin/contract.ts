@@ -6,11 +6,13 @@ export interface HolisticUser {
   displayName: string; // human label for the top bar (nickname, else OS name)
   groups: string[]; // e.g. ["family","smbusers"]
   isAdmin: boolean; // member of the admin group (Linux sudo — single source of truth)
+  // Whether the user's login shell is a real shell (not nologin/false) — the source of truth
+  // for the shell-type right (remshel). Optional so older payloads keep working.
+  shellEnabled?: boolean;
   // App-managed profile fields (editable via the account menu). Optional so older
   // payloads and services that don't care keep working unchanged.
   firstName?: string;
   lastName?: string;
-  email?: string;
   avatarUrl?: string | null; // profile photo, or null/undefined for initials
 }
 
@@ -33,6 +35,10 @@ export interface ServiceNavigation {
   path: string; // current sub-path within the service
   navigate(subPath: string): void; // push within the service
   setTitle(title: string | null): void; // updates the TopBar title segment
+  /** Switch to ANOTHER service's tab (deliberate cross-service handoff — e.g. the Files app
+   *  opening aigentic with a seeded conversation). subPath is that service's sub-route; pass
+   *  bulky payloads out-of-band (localStorage / the target's API), not in the path. */
+  openService(serviceId: string, subPath?: string): void;
 }
 
 /** Imperative SDK surfaces the shell owns. */
@@ -56,6 +62,9 @@ export interface InstanceInfo {
 export interface ServiceContextProps {
   user: HolisticUser;
   api: ServiceApiClient;
+  /** A client for any sibling service (base /api/services/<id>/), same auth/CSRF as `api`.
+   *  Enables deliberate cross-service calls — e.g. the Files app invoking aigentic's /run. */
+  apiFor: (serviceId: string) => ServiceApiClient;
   nav: ServiceNavigation;
   ui: ServiceUiBridge;
   instance: InstanceInfo; // runtime domain — single source of truth for services
@@ -71,7 +80,11 @@ export interface ServicePlugin {
   icon: ComponentType<{ className?: string }>;
   /** The mounted root. Receives ServiceContextProps; renders ONLY @holistic/ui. */
   Component: ComponentType<ServiceContextProps>;
-  /** Optional visibility gate (e.g. require a group). Default: always visible. */
+  /** Optional visibility gate. When OMITTED the shell applies the default rights gate
+   *  (`serviceVisibleByDefault`): the tab is shown only to admins or users holding at least
+   *  one of the service's `hp_<id>_*` rights — so a service the user has no rights for never
+   *  clutters the sidebar. Define this only for services whose access right doesn't follow
+   *  the `hp_<id>_*` convention (e.g. privleg's `hp_priv_*`, or remshel's shell-type right). */
   visible?(user: HolisticUser): boolean;
   /** Optional sidebar ordering hint; lower = higher. Default 100. */
   order?: number;
@@ -176,4 +189,14 @@ export interface PermissionManifest {
  *  admin-only — identical to pre-rights-standard behaviour. */
 export function userHasRight(user: Pick<HolisticUser, 'isAdmin' | 'groups'>, group: string): boolean {
   return user.isAdmin || user.groups.includes(group);
+}
+
+/** Default sidebar-visibility gate for a service that doesn't define its own `visible`:
+ *  a tab is shown only to admins, or to users holding at least one of the service's rights.
+ *  By the rights-standard convention a service's backing groups are `hp_<id>_*`, so holding
+ *  any such group means "has a right for this service". A service the user has no rights for
+ *  is hidden — no empty, unusable tab. (Services whose rights don't follow the convention —
+ *  privleg's `hp_priv_*`, remshel's shell-type right — supply their own `visible` instead.) */
+export function serviceVisibleByDefault(user: Pick<HolisticUser, 'isAdmin' | 'groups'>, serviceId: string): boolean {
+  return user.isAdmin || user.groups.some((g) => g.startsWith(`hp_${serviceId}_`));
 }

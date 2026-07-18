@@ -35,8 +35,10 @@ export const UploadIcon = icon(<><path d="M12 16V4" /><path d="m7 9 5-5 5 5" /><
 export const DownloadIcon = icon(<><path d="M12 4v12" /><path d="m7 11 5 5 5-5" /><path d="M5 20h14" /></>);
 export const TrashIcon = icon(<><path d="M4 7h16" /><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /><path d="M6 7l1 13h10l1-13" /></>);
 export const PencilIcon = icon(<path d="M4 20h4L20 8l-4-4L4 16v4Z" />);
+export const SettingsIcon = icon(<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" /><circle cx="12" cy="12" r="3" /></>);
 export const FolderPlusIcon = icon(<><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" /><path d="M12 11v5M9.5 13.5h5" /></>);
 export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />);
+export const BellIcon = icon(<><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>);
 export const ChevronRightIcon = icon(<path d="m9 6 6 6-6 6" />);
 export const ChevronLeftIcon = icon(<path d="m15 6-6 6 6 6" />);
 export const ChevronDownIcon = icon(<path d="m6 9 6 6 6-6" />);
@@ -58,6 +60,9 @@ export const CopyIcon = icon(<><rect x="9" y="9" width="11" height="11" rx="2" /
 export const InfoIcon = icon(<><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></>);
 export const FilesIcon = icon(<><path d="M7 3h7l4 4v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /><path d="M14 3v4h4" /></>);
 export const CheckIcon = icon(<path d="m5 12 5 5 9-11" />);
+export const MailIcon = icon(<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3.5 7.5 8.5 6 8.5-6" /></>);
+export const ReplyIcon = icon(<><path d="M9 7 4 12l5 5" /><path d="M4 12h9a7 7 0 0 1 7 7" /></>);
+export const SendIcon = icon(<><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7Z" /></>);
 export const AlertIcon = icon(<><path d="M12 4 2 20h20L12 4Z" /><path d="M12 10v5M12 18h.01" /></>);
 
 // Hardware / metrics icons (for hostek's live-server dashboard).
@@ -80,3 +85,23 @@ export const EthernetIcon = icon(<><rect x="3" y="8" width="18" height="11" rx="
 
 // Terminal / remote shell.
 export const TerminalIcon = icon(<><rect x="3" y="4" width="18" height="16" rx="2" /><path d="m7 9 3 3-3 3" /><path d="M13 15h4" /></>);
+
+// Rich-text editor toolbar glyphs.
+export const BoldIcon = icon(<path d="M7 5h6.5a3.5 3.5 0 0 1 0 7H7zM7 12h7.5a3.5 3.5 0 0 1 0 7H7z" />);
+export const ItalicIcon = icon(<path d="M11 5h7M6 19h7M14.5 5l-5 14" />);
+export const UnderlineIcon = icon(<><path d="M7 5v6a5 5 0 0 0 10 0V5" /><path d="M5 21h14" /></>);
+export const StrikethroughIcon = icon(<><path d="M5 12h14" /><path d="M8 8.5C8 6.5 9.8 5 12.2 5c1.8 0 3.2.7 3.8 2M16 15c0 2.2-1.9 3.6-4.2 3.6-2 0-3.6-.8-4.3-2.3" /></>);
+export const ListOrderedIcon = icon(<><path d="M10 6h10M10 12h10M10 18h10" /><path d="M4 4.5v3M3 7.5h2M3 11.5h1.6L3 13.5h1.8M3 16.5h1.7M3 18.5h1.7" /></>);
+export const LinkIcon = icon(<><path d="M9 15l6-6" /><path d="M10.5 6.5l.8-.8a4 4 0 0 1 5.7 5.7l-.8.8" /><path d="M13.5 17.5l-.8.8a4 4 0 0 1-5.7-5.7l.8-.8" /></>);
+export const QuoteIcon = icon(<><path d="M5 6h5v5H5z" /><path d="M5 11c0 3 .6 4 3 5" /><path d="M14 6h5v5h-5z" /><path d="M14 11c0 3 .6 4 3 5" /></>);
+export const ClearFormatIcon = icon(<><path d="M8 6h12M13 6l-3.5 9" /><path d="M5 19h6" /><path d="m16 14 5 5M21 14l-5 5" /></>);
+
+// Expand / window controls + editor: alignment, indent, table, rule, image already exists.
+export const MaximizeIcon = icon(<><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M16 3h3a2 2 0 0 1 2 2v3" /><path d="M21 16v3a2 2 0 0 1-2 2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /></>);
+export const AlignLeftIcon = icon(<path d="M4 6h16M4 12h10M4 18h13" />);
+export const AlignCenterIcon = icon(<path d="M4 6h16M7 12h10M5 18h14" />);
+export const AlignRightIcon = icon(<path d="M4 6h16M10 12h10M7 18h13" />);
+export const IndentIcon = icon(<><path d="M8 6h12M8 12h12M8 18h12" /><path d="M3 9l3 3-3 3" /></>);
+export const OutdentIcon = icon(<><path d="M8 6h12M8 12h12M8 18h12" /><path d="M6 9l-3 3 3 3" /></>);
+export const TableIcon = icon(<><rect x="3" y="4" width="18" height="16" rx="1.5" /><path d="M3 10h18M3 15h18M9 4v16M15 4v16" /></>);
+export const MinusIcon = icon(<path d="M5 12h14" />);

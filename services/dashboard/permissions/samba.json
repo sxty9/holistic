@@ -1,7 +1,28 @@
 {
   "service": "samba",
-  "version": 2,
+  "version": 3,
   "categories": [
+    {
+      "id": "files",
+      "label": "Dateien",
+      "description": "Zugriff auf die Dateiablage.",
+      "permissions": [
+        {
+          "id": "view",
+          "label": "Dateien ansehen",
+          "description": "Die Dateien-App öffnen und Dateien/Ordner ansehen und herunterladen. Ohne dieses Recht erscheint der Dateien-Tab nicht.",
+          "group": "hp_samba_view",
+          "default": true
+        },
+        {
+          "id": "edit",
+          "label": "Dateien bearbeiten",
+          "description": "Dateien im eigenen Bereich anlegen, ändern, hochladen, verschieben und löschen.",
+          "group": "hp_samba_edit",
+          "default": true
+        }
+      ]
+    },
     {
       "id": "shares",
       "label": "Dateifreigaben",

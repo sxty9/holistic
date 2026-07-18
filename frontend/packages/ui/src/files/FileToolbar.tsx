@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Button, IconButton, SearchField, SegmentedControl } from '../controls';
 import { ArrowUpIcon, CopyIcon, DownloadIcon, FolderPlusIcon, GridIcon, ListIcon, MoveIcon, PencilIcon, TrashIcon } from '../icons';
 import { Text } from '../primitives';
@@ -19,12 +20,14 @@ export interface FileToolbarProps {
   onNewFolder: () => void;
   onUpload: (files: File[]) => void;
   onAction: (action: FileActionId, entries: FileEntry[]) => void;
+  /** Folder-level actions contributed by other services (rendered after the built-in
+   *  controls). Generic slot — the toolbar knows nothing about what they do. */
+  actions?: ReactNode;
 }
 
-export function FileToolbar({ view, onViewChange, search, onSearch, selection, canWrite, canGoUp, onNavigateUp, onNewFolder, onUpload, onAction }: FileToolbarProps) {
+export function FileToolbar({ view, onViewChange, search, onSearch, selection, canWrite, canGoUp, onNavigateUp, onNewFolder, onUpload, onAction, actions }: FileToolbarProps) {
   const t = useT();
   const hasSel = selection.length > 0;
-  const onlyFiles = hasSel && selection.every((s) => s.kind === 'file');
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-2 flex-wrap">
@@ -45,17 +48,16 @@ export function FileToolbar({ view, onViewChange, search, onSearch, selection, c
             <UploadControl onFiles={onUpload} />
           </>
         )}
+        {actions}
         {hasSel && (
           <>
             {canWrite && <span aria-hidden className="mx-1 h-5 w-px bg-separator" />}
             <Text variant="footnote" color="secondary">
               {t('files.selected', { count: selection.length })}
             </Text>
-            {onlyFiles && (
-              <Button variant="secondary" size="sm" iconLeft={<DownloadIcon className="h-4 w-4" />} onClick={() => onAction('download', selection)}>
-                {t('common.download')}
-              </Button>
-            )}
+            <Button variant="secondary" size="sm" iconLeft={<DownloadIcon className="h-4 w-4" />} onClick={() => onAction('download', selection)}>
+              {t('common.download')}
+            </Button>
             {selection.length === 1 && (
               <Button variant="secondary" size="sm" iconLeft={<PencilIcon className="h-4 w-4" />} onClick={() => onAction('rename', selection)}>
                 {t('common.rename')}

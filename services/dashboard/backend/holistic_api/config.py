@@ -57,6 +57,16 @@ class Settings:
 
     invites_path: str = os.environ.get("HOLISTIC_INVITES", "/var/lib/holistic/invites.json")
     revoked_path: str = os.environ.get("HOLISTIC_REVOKED", "/var/lib/holistic/revoked.json")
+    # Configuration standard (the mirror of the rights standard, see services/config/router.py):
+    #   config_manifests_dir — services DECLARE their settings + defaults here, one drop-in per
+    #                          service (read-only to the dashboard), like permissions.d.
+    #   config_values_dir    — the dashboard WRITES the admin-set values here, one file per
+    #                          service; every service daemon reads its file live.
+    #   config_group         — the Unix group shared by dashboard + daemons; values are 0640
+    #                          root-of-trust files readable by exactly that group (secrets!).
+    config_manifests_dir: str = os.environ.get("HOLISTIC_CONFIG_DIR", "/etc/holistic/config.d")
+    config_values_dir: str = os.environ.get("HOLISTIC_CONFIG_VALUES", "/var/lib/holistic/config")
+    config_group: str = os.environ.get("HOLISTIC_CONFIG_GROUP", "holistic")
     # Runtime domain awareness (see instance.py). All optional → zero-config: empty means
     # "derive from the incoming request". holistic is served same-origin behind Caddy on
     # whatever domain the operator points at it, so the public origin/host is read live from
@@ -69,7 +79,7 @@ class Settings:
     public_origin: str = os.environ.get("HOLISTIC_PUBLIC_ORIGIN", "").strip()
     mail_domain: str = os.environ.get("HOLISTIC_MAIL_DOMAIN", "").strip()
     instance_path: str = os.environ.get("HOLISTIC_INSTANCE", "/var/lib/holistic/instance.json")
-    # App-managed profile store (first/last name, email, nickname, avatar). Written by the
+    # App-managed profile store (first/last name, nickname, avatar). Written by the
     # backend user directly, like invites — no OS-identity change, so no privileged wrapper.
     profiles_root: str = os.environ.get("HOLISTIC_PROFILES", "/var/lib/holistic/profiles")
 
@@ -81,6 +91,10 @@ class Settings:
     user_delete: str = os.environ.get("HOLISTIC_USER_DELETE", "/usr/local/sbin/holistic-user-delete")
 
     cookie_secure: bool = _bool("HOLISTIC_COOKIE_SECURE", True)
+    # When set (e.g. ".henrysoase.org"), session cookies are scoped to the parent domain so
+    # sibling Holistic services on subdomains (e.g. devlab.<zone>) share one sign-in (SSO).
+    # Empty default = host-only cookies (today's behavior); dev/preview unaffected.
+    cookie_domain: str = os.environ.get("HOLISTIC_COOKIE_DOMAIN", "").strip()
 
     max_upload_bytes: int = int(os.environ.get("HOLISTIC_MAX_UPLOAD", str(20 * 1024**3)))
     max_avatar_bytes: int = int(os.environ.get("HOLISTIC_MAX_AVATAR", str(5 * 1024**2)))

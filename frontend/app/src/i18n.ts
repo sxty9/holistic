@@ -22,6 +22,19 @@ registerMessages({
     'auth.noAccount': 'No account?',
     'auth.createOne': 'Create one',
 
+    // Emergency shutdown ("Not-Aus") — pre-login button served by the hostek service
+    'notaus.button': 'Emergency shutdown',
+    'notaus.modalTitle': 'Emergency shutdown',
+    'notaus.modalDesc': 'Enter the emergency password to power the server off cleanly. It shuts down immediately.',
+    'notaus.passwordLabel': 'Emergency password',
+    'notaus.confirm': 'Shut down now',
+    'notaus.errWrongPw': 'Wrong password.',
+    'notaus.errLocked': 'Too many attempts. Try again in a minute.',
+    'notaus.errFailed': 'Could not shut down. Try again.',
+    'notaus.doneTitle': 'Server is shutting down',
+    'notaus.doneSubtitle': 'The server is powering off.',
+    'notaus.doneBody': 'Once it is fully off you can safely disconnect power.',
+
     // Register
     'auth.registerTitle': 'Create your account',
     'auth.registerSubtitle': 'You’ll get a private drive and family access',
@@ -68,6 +81,19 @@ registerMessages({
     'auth.noAccount': 'Kein Konto?',
     'auth.createOne': 'Erstelle eines',
 
+    // Not-Aus (Notabschaltung) — Knopf vor der Anmeldung, vom hostek-Dienst bereitgestellt
+    'notaus.button': 'Not-Aus',
+    'notaus.modalTitle': 'Not-Aus',
+    'notaus.modalDesc': 'Gib das Not-Aus-Passwort ein, um den Server sauber herunterzufahren. Er schaltet sofort ab.',
+    'notaus.passwordLabel': 'Not-Aus-Passwort',
+    'notaus.confirm': 'Jetzt herunterfahren',
+    'notaus.errWrongPw': 'Falsches Passwort.',
+    'notaus.errLocked': 'Zu viele Versuche. Bitte in einer Minute erneut versuchen.',
+    'notaus.errFailed': 'Herunterfahren fehlgeschlagen. Bitte erneut versuchen.',
+    'notaus.doneTitle': 'Server wird heruntergefahren',
+    'notaus.doneSubtitle': 'Der Server schaltet ab.',
+    'notaus.doneBody': 'Sobald er vollständig aus ist, kann die Stromversorgung gefahrlos getrennt werden.',
+
     'auth.registerTitle': 'Konto erstellen',
     'auth.registerSubtitle': 'Du erhältst ein privates Laufwerk und Familienzugriff',
     'auth.errPwMismatch': 'Passwörter stimmen nicht überein.',
@@ -111,6 +137,19 @@ registerMessages({
     'auth.signInShort': 'サインイン',
     'auth.noAccount': 'アカウントがありませんか？',
     'auth.createOne': '作成する',
+
+    // 緊急シャットダウン（Not-Aus）— hostek サービスが提供するログイン前のボタン
+    'notaus.button': '緊急シャットダウン',
+    'notaus.modalTitle': '緊急シャットダウン',
+    'notaus.modalDesc': '緊急パスワードを入力すると、サーバーを安全に電源オフします。すぐにシャットダウンします。',
+    'notaus.passwordLabel': '緊急パスワード',
+    'notaus.confirm': '今すぐシャットダウン',
+    'notaus.errWrongPw': 'パスワードが違います。',
+    'notaus.errLocked': '試行回数が多すぎます。1分後にもう一度お試しください。',
+    'notaus.errFailed': 'シャットダウンできませんでした。もう一度お試しください。',
+    'notaus.doneTitle': 'サーバーをシャットダウンしています',
+    'notaus.doneSubtitle': 'サーバーの電源を切っています。',
+    'notaus.doneBody': '完全に電源が切れたら、安全に電源を抜くことができます。',
 
     'auth.registerTitle': 'アカウントを作成',
     'auth.registerSubtitle': 'プライベートドライブと家族アクセスが利用できます',
