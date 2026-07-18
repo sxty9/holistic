@@ -93,6 +93,18 @@ export const instanceApi = {
   get: () => request<InstanceInfo>('/api/instance'),
 };
 
+/** The current user's mail identity, read from the mail service (GET /api/services/mail/info):
+ *  their primary ("Stamm") Holistic address plus every alias that delivers to them, primary first.
+ *  Resolves to null when the mail service isn't reachable for this user (not provisioned / no
+ *  access), so callers can simply hide the section instead of surfacing an error. */
+export const mailApi = {
+  identity: () =>
+    scopedApi('mail')
+      .get<{ address: string; addresses: string[] }>('info')
+      .then((r) => ({ primary: r.address, addresses: r.addresses ?? [] }))
+      .catch(() => null),
+};
+
 /** A service-scoped client (base /api/services/<id>/) handed to each service Component. */
 export function scopedApi(serviceId: string): ServiceApiClient {
   const base = `/api/services/${serviceId}/`;
