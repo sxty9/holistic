@@ -135,9 +135,8 @@ export function FileBrowser({ entries, view, selection, loading, error, cutPaths
   function contextItems(entry: FileEntry): MenuItem[] {
     const targets = targetFor(entry);
     const single = targets.length === 1;
-    const onlyFiles = targets.every((t) => t.kind === 'file');
     const items: MenuItem[] = [{ id: 'open', label: t('common.open'), icon: <FolderIcon />, onSelect: () => onOpen(entry) }];
-    if (onlyFiles) items.push({ id: 'download', label: t('common.download'), icon: <DownloadIcon />, onSelect: () => onAction('download', targets) });
+    items.push({ id: 'download', label: t('common.download'), icon: <DownloadIcon />, onSelect: () => onAction('download', targets) });
     if (single) items.push({ id: 'rename', label: t('common.rename'), icon: <PencilIcon />, onSelect: () => onAction('rename', targets) });
     items.push({ id: 'copy', label: t('common.copy'), icon: <CopyIcon />, onSelect: () => onAction('copy', targets) });
     items.push({ id: 'move', label: t('common.move'), icon: <MoveIcon />, onSelect: () => onAction('move', targets) });

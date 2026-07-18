@@ -40,13 +40,8 @@ def run_json(user: str, op: str, *args: str) -> dict:
     return json.loads(r.stdout or b"{}")
 
 
-def stream(user: str, abspath: str, offset: int | None = None, length: int | None = None) -> Iterator[bytes]:
-    args = [abspath]
-    if offset is not None:
-        args += ["--offset", str(offset)]
-    if length is not None:
-        args += ["--length", str(length)]
-    proc = subprocess.Popen(_argv(user, "read", *args), stdout=subprocess.PIPE, env=_env(user))
+def _pipe(argv: list[str], env: dict | None) -> Iterator[bytes]:
+    proc = subprocess.Popen(argv, stdout=subprocess.PIPE, env=env)
     assert proc.stdout is not None
     try:
         while True:
@@ -55,8 +50,33 @@ def stream(user: str, abspath: str, offset: int | None = None, length: int | Non
                 break
             yield chunk
     finally:
+        # Closing the pipe makes the broker die on EPIPE. Reap it, but never block the worker
+        # on a child that ignores the broken pipe — an aborted folder download must not leak a
+        # process still walking the tree.
         proc.stdout.close()
-        proc.wait()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+
+
+def stream(user: str, abspath: str, offset: int | None = None, length: int | None = None) -> Iterator[bytes]:
+    args = [abspath]
+    if offset is not None:
+        args += ["--offset", str(offset)]
+    if length is not None:
+        args += ["--length", str(length)]
+    yield from _pipe(_argv(user, "read", *args), _env(user))
+
+
+def stream_archive(user: str, absdir: str, names: list[str] | None = None) -> Iterator[bytes]:
+    """Stream a ZIP built on the fly by the broker running as the user: all of `absdir`, or —
+    given `names` — only those children of it (a Files multi-selection)."""
+    args = [absdir]
+    for n in names or []:
+        args += ["--name", n]
+    yield from _pipe(_argv(user, "archive", *args), _env(user))
 
 
 def write_stream(user: str, abspath: str, src, max_bytes: int) -> dict:

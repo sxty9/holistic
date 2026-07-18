@@ -10,6 +10,8 @@ Subcommands:
   stat   <abspath>
   list   <absdir>
   read   <abspath> [--offset N] [--length M]      -> raw bytes on stdout
+  archive <absdir> [--name N ...]                  -> streamed ZIP on stdout (whole dir, or
+                                                      just the named children of it)
   write  <absfile>                                 -> bytes from stdin (O_CREAT|O_EXCL)
   mkdir  <absdir>
   rename <abspath> <newname>
@@ -17,7 +19,7 @@ Subcommands:
   copy   <abssrc> <absdstdir>
   delete <abspath> [--recursive]
 
-Metadata ops print JSON; `read` writes raw bytes. Exit: 0 ok · 2 bad request · 3 denied · 4 not found · 5 exists.
+Metadata ops print JSON; `read`/`archive` write raw bytes. Exit: 0 ok · 2 bad request · 3 denied · 4 not found · 5 exists.
 """
 from __future__ import annotations
 
@@ -30,12 +32,20 @@ import re
 import shutil
 import stat as statmod
 import sys
+import zipfile
 
 SAFE_NAME = re.compile(r"^[^\x00-\x1f/\\]{1,255}$")
 CODE_EXT = {
     "js", "ts", "tsx", "jsx", "py", "sh", "bash", "c", "h", "cpp", "hpp", "go", "rs", "java",
     "rb", "php", "css", "scss", "html", "xml", "json", "yaml", "yml", "toml", "ini", "conf",
     "cfg", "md", "markdown", "log", "csv", "tsv", "sql", "txt",
+}
+# Extensions whose bytes are already compressed. Deflating them costs CPU for ~no gain, and a
+# folder download here is usually photos or video — so they go into the archive stored.
+PRECOMPRESSED = {
+    "jpg", "jpeg", "png", "gif", "webp", "avif", "heic", "heif", "mp3", "aac", "m4a", "ogg",
+    "opus", "flac", "mp4", "m4v", "mov", "avi", "mkv", "webm", "zip", "gz", "tgz", "bz2",
+    "xz", "zst", "7z", "rar",
 }
 
 
@@ -180,6 +190,76 @@ def cmd_read(a):
     out.flush()
 
 
+def _ctype(name: str) -> int:
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    return zipfile.ZIP_STORED if ext in PRECOMPRESSED else zipfile.ZIP_DEFLATED
+
+
+def _zip_entry(zf, src: str, top: str) -> None:
+    """Add `src` to the archive under the arc-name `top` — a lone file, or a whole directory
+    walked recursively. Every path is re-checked with _within(): os.walk does not follow
+    symlinks, but a symlink still *appears* as an entry and must not be able to pull bytes
+    from outside the user's roots into the archive."""
+    if not os.path.isdir(src):
+        try:
+            zf.write(src, top, compress_type=_ctype(os.path.basename(src)))
+        except OSError:
+            pass  # unreadable or removed mid-run: skip it, don't abort the download
+        return
+    for dirpath, dirnames, filenames in os.walk(src, followlinks=False):
+        dirnames[:] = sorted(d for d in dirnames if _within(os.path.realpath(os.path.join(dirpath, d))))
+        filenames.sort()
+        rel = os.path.relpath(dirpath, src)
+        prefix = top if rel == "." else os.path.join(top, rel)
+        wrote = False
+        for name in filenames:
+            f = os.path.join(dirpath, name)
+            if not _within(os.path.realpath(f)):
+                continue
+            try:
+                zf.write(f, os.path.join(prefix, name), compress_type=_ctype(name))
+            except OSError:
+                continue
+            wrote = True
+        if not wrote and not dirnames:
+            # Nothing under here made it into the archive (empty dir, or everything in it was
+            # skipped). Name it explicitly so the folder still exists when unzipped.
+            info = zipfile.ZipInfo(prefix + "/")
+            info.external_attr = (statmod.S_IFDIR | 0o755) << 16
+            zf.writestr(info, b"")
+
+
+def cmd_archive(a):
+    """Stream a ZIP on stdout: the whole directory, or — with one or more --name — only those
+    children of it, sitting at the archive's top level (a Files multi-selection).
+
+    stdout is a pipe, so zipfile finds it unseekable and emits data descriptors instead of
+    rewinding to patch each entry's size. That is what makes the archive streamable, and why
+    there is no Content-Length for the caller.
+    """
+    real = validate(a.path)
+    if not os.path.isdir(real):
+        fail(4, "not a directory")
+    if a.name:
+        targets = []
+        for n in a.name:
+            if n in (".", "..") or not SAFE_NAME.match(n):
+                fail(2, "invalid name")
+            child = os.path.realpath(os.path.join(real, n))
+            if not _within(child):
+                fail(3, "selection outside allowed roots")
+            if not os.path.exists(child):
+                fail(4, "not found")
+            targets.append((child, n))
+    else:
+        targets = [(real, os.path.basename(real.rstrip("/")) or "archive")]
+    out = sys.stdout.buffer
+    with zipfile.ZipFile(out, "w", allowZip64=True) as zf:
+        for src, top in targets:
+            _zip_entry(zf, src, top)
+    out.flush()
+
+
 def cmd_write(a):
     target = validate_new(os.path.dirname(a.path), os.path.basename(a.path))
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
@@ -277,6 +357,10 @@ def main() -> int:
     sr.add_argument("--offset", type=int, default=0)
     sr.add_argument("--length", type=int, default=None)
     sr.set_defaults(fn=cmd_read)
+    sa = sub.add_parser("archive")
+    sa.add_argument("path")
+    sa.add_argument("--name", action="append", default=[], help="archive only this child (repeatable)")
+    sa.set_defaults(fn=cmd_archive)
     for name in ("write", "mkdir"):
         sp = sub.add_parser(name)
         sp.add_argument("path")
@@ -296,7 +380,13 @@ def main() -> int:
     sd.set_defaults(fn=cmd_delete)
 
     args = p.parse_args()
-    args.fn(args)
+    try:
+        args.fn(args)
+    except BrokenPipeError:
+        # The caller hung up mid-stream — a cancelled download or a closed tab, routine for
+        # `read`/`archive`. Point stdout at /dev/null so the interpreter's final flush cannot
+        # raise again, and exit quietly rather than filling the journal with tracebacks.
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
     return 0
 
 

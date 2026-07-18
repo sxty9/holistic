@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -22,6 +23,9 @@ router = APIRouter(prefix="/api/services/samba", tags=["samba"])
 SAMBA_VIEW = "hp_samba_view"
 SAMBA_EDIT = "hp_samba_edit"
 SAMBA_FAMILY_WRITE = "hp_samba_family_write"
+
+# Ceiling on items in one multi-selection ZIP (see fs_archive).
+MAX_ARCHIVE_ITEMS = 1000
 
 # Dependency: every read endpoint requires the view right (admin or hp_samba_view).
 require_view = require_permission(SAMBA_VIEW)
@@ -97,17 +101,27 @@ def fs_stat(path: str, user: dict = Depends(require_view)):
         raise _fs_http(e)
 
 
-def _serve(user: str, vpath: str, request: Request, inline: bool):
+def _stat(user: str, vpath: str) -> tuple[str, dict]:
     abspath = _abspath(user, vpath)
     try:
-        meta = fsclient.run_json(user, "stat", abspath)
+        return abspath, fsclient.run_json(user, "stat", abspath)
     except fsclient.FsError as e:
         raise _fs_http(e)
+
+
+def _content_disposition(disposition: str, name: str) -> str:
+    """RFC 6266: a sanitised ASCII filename for old clients plus a UTF-8 filename* — the UI
+    ships de/ja, so folder and file names routinely leave ASCII. Quoting both ways also keeps
+    quotes/backslashes/control characters out of the header."""
+    ascii_name = "".join(c if 32 <= ord(c) < 127 and c not in '"\\' else "_" for c in name)
+    return f"{disposition}; filename=\"{ascii_name or 'download'}\"; filename*=UTF-8''{quote(name, safe='')}"
+
+
+def _serve(user: str, abspath: str, meta: dict, request: Request, inline: bool):
     if meta["kind"] != "file":
         raise HTTPException(400, "Not a file")
     size = int(meta["size"])
     mime = meta.get("mime") or "application/octet-stream"
-    name = meta["name"].replace('"', "")
 
     start, end, status = 0, size - 1, 200
     rng = request.headers.get("range")
@@ -128,7 +142,7 @@ def _serve(user: str, vpath: str, request: Request, inline: bool):
         "Accept-Ranges": "bytes",
         "Content-Length": str(length),
         "ETag": f'"{meta["mtime"]}-{size}"',
-        "Content-Disposition": f'{"inline" if inline else "attachment"}; filename="{name}"',
+        "Content-Disposition": _content_disposition("inline" if inline else "attachment", meta["name"]),
     }
     if status == 206:
         headers["Content-Range"] = f"bytes {start}-{end}/{size}"
@@ -136,14 +150,52 @@ def _serve(user: str, vpath: str, request: Request, inline: bool):
     return StreamingResponse(gen, status_code=status, media_type=mime, headers=headers)
 
 
+def _serve_archive(user: str, abspath: str, meta: dict, names: list[str] | None = None):
+    """Stream a ZIP the broker builds while the response is being sent — a whole folder, or the
+    named children of it. The size is unknowable up front, so unlike _serve this has no
+    Content-Length and cannot honour Range: a one-shot chunked download, not a resumable one."""
+    headers = {
+        "Content-Disposition": _content_disposition("attachment", f'{meta["name"]}.zip'),
+        "Cache-Control": "no-store",  # generated per request; nothing here is revalidatable
+    }
+    gen = fsclient.stream_archive(user, abspath, names)
+    return StreamingResponse(gen, media_type="application/zip", headers=headers)
+
+
 @router.get("/fs/download")
 def fs_download(path: str, request: Request, user: dict = Depends(require_view)):
-    return _serve(user["username"], path, request, inline=False)
+    """Files stream as-is (Range-capable); folders stream as a generated ZIP."""
+    user_name = user["username"]
+    abspath, meta = _stat(user_name, path)
+    if meta["kind"] == "dir":
+        return _serve_archive(user_name, abspath, meta)
+    return _serve(user_name, abspath, meta, request, inline=False)
+
+
+@router.get("/fs/archive")
+def fs_archive(path: str, name: list[str] = Query(default=[]), user: dict = Depends(require_view)):
+    """Bundle a multi-selection into one ZIP. A Files selection always comes from a single
+    listing, so the request carries the containing folder plus child names rather than N full
+    paths — far shorter, which matters because this is a GET that has to fit in a URL."""
+    if not name:
+        raise HTTPException(400, "No items selected")
+    if len(name) > MAX_ARCHIVE_ITEMS:
+        # Bounds the broker's argv. The client guards on URL length first, so this is the
+        # backstop for a hand-built request, not the limit users normally meet.
+        raise HTTPException(400, f"Select at most {MAX_ARCHIVE_ITEMS} items, or download the whole folder")
+    for n in name:
+        if not n or n in (".", "..") or "/" in n or "\\" in n or "\x00" in n:
+            raise HTTPException(400, "Invalid name")
+    abspath, meta = _stat(user["username"], path)
+    if meta["kind"] != "dir":
+        raise HTTPException(400, "Not a folder")
+    return _serve_archive(user["username"], abspath, meta, name)
 
 
 @router.get("/fs/raw")
 def fs_raw(path: str, request: Request, user: dict = Depends(require_view)):
-    return _serve(user["username"], path, request, inline=True)
+    abspath, meta = _stat(user["username"], path)
+    return _serve(user["username"], abspath, meta, request, inline=True)
 
 
 @router.get("/fs/text")

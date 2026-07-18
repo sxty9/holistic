@@ -51,6 +51,9 @@ function buildBreadcrumb(cwd: string, roots: FileRoot[], rootLabel: (key: string
 
 const q = (path: string) => encodeURIComponent(path);
 const parentOf = (path: string) => path.split('/').slice(0, -1).join('/');
+// Ceiling for the bundled-download URL. Servers and proxies cap the request line (commonly
+// 8 KB); staying under that turns an opaque truncation into a clear message.
+const MAX_DOWNLOAD_URL = 6000;
 
 export function FileManager({ user, api, apiFor, ui, nav }: ServiceContextProps) {
   const t = useT();
@@ -120,15 +123,34 @@ export function FileManager({ user, api, apiFor, ui, nav }: ServiceContextProps)
     setCwd(path);
   }
 
+  function saveAs(href: string, filename: string) {
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   function download(items: FileEntry[]) {
-    for (const it of items) {
-      const a = document.createElement('a');
-      a.href = api.url(`fs/download?path=${q(it.path)}`);
-      a.download = it.name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+    if (items.length === 0) return;
+    if (items.length === 1) {
+      const [it] = items;
+      // A lone file streams as-is; a lone folder comes back as a ZIP the server builds live.
+      saveAs(api.url(`fs/download?path=${q(it.path)}`), it.kind === 'dir' ? `${it.name}.zip` : it.name);
+      return;
     }
+    // Several items — one ZIP. They always come from the current listing, so the request is
+    // "this folder + these names" instead of N full paths; that keeps the URL short.
+    const dirName = cwd.includes('/') ? cwd.slice(cwd.lastIndexOf('/') + 1) : rootLabel(cwd, cwd);
+    const href = api.url(`fs/archive?path=${q(cwd)}${items.map((i) => `&name=${q(i.name)}`).join('')}`);
+    // This is a GET, so the whole selection has to survive as a URL. Refuse loudly rather than
+    // fire a request the proxy would cut short.
+    if (href.length > MAX_DOWNLOAD_URL) {
+      ui.toast({ title: t('samba.tooManySelected'), description: t('samba.tooManySelectedHint'), variant: 'error' });
+      return;
+    }
+    saveAs(href, `${dirName}.zip`);
   }
 
   async function openEntry(entry: FileEntry) {
@@ -164,7 +186,7 @@ export function FileManager({ user, api, apiFor, ui, nav }: ServiceContextProps)
   }
 
   function handleAction(action: FileActionId, targets: FileEntry[]) {
-    if (action === 'download') download(targets.filter((t) => t.kind === 'file'));
+    if (action === 'download') download(targets);
     else if (action === 'rename') setRenaming(targets[0]);
     else if (action === 'move') {
       setClipboard({ mode: 'move', items: targets });
