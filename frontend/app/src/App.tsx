@@ -6,6 +6,7 @@ import {
   ContentRegion,
   EmptyState,
   HolisticMark,
+  NotificationCenter,
   Sidebar,
   Spinner,
   Text,
@@ -113,10 +114,15 @@ function Shell({ user, instance, onSignOut, onUserChange }: { user: HolisticUser
 
   const items = visibleServices.map((s) => ({ id: s.id, label: serviceLabel(s), icon: s.icon }));
 
+  // The notification centre talks to the notify service; memoise the client so its live SSE
+  // connection isn't torn down and rebuilt on every shell re-render.
+  const notifyApi = useMemo(() => scopedApi('notify'), []);
+  const notifications = <NotificationCenter api={notifyApi} onOpenUrl={(url) => navigate(url)} />;
+
   return (
     <AppShell
       sidebar={<Sidebar header={<Brand />} items={items} activeId={serviceId} onSelect={(id) => navigate(`/app/${id}`)} />}
-      topBar={<TopBar title={title ?? (active ? serviceLabel(active) : undefined)} user={user} onSignOut={onSignOut} onEditProfile={() => setProfileOpen(true)} onChangePassword={() => setPwOpen(true)} />}
+      topBar={<TopBar title={title ?? (active ? serviceLabel(active) : undefined)} actions={notifications} user={user} onSignOut={onSignOut} onEditProfile={() => setProfileOpen(true)} onChangePassword={() => setPwOpen(true)} />}
     >
       <ServiceBoundary key={serviceId}>
         {active && ctx ? <active.Component {...ctx} /> : <ContentRegion><EmptyState title={t('app.noServicesTitle')} description={t('app.noServicesDesc')} /></ContentRegion>}

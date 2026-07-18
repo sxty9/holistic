@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import {
   Avatar,
+  Badge,
   Button,
   Field,
   Grid,
@@ -13,7 +14,7 @@ import {
   toast,
   type HolisticUser,
 } from '@holistic/ui';
-import { ApiError, authApi } from '../api/holisticClient';
+import { ApiError, authApi, mailApi } from '../api/holisticClient';
 
 export function ProfileModal({
   open,
@@ -32,6 +33,7 @@ export function ProfileModal({
   const [busy, setBusy] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mail, setMail] = useState<{ primary: string; addresses: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Seed from the identity we already hold, then refresh with the authoritative
@@ -42,6 +44,7 @@ export function ProfileModal({
     setFirstName(user.firstName ?? '');
     setLastName(user.lastName ?? '');
     setNickname('');
+    setMail(null);
     authApi
       .getProfile()
       .then((p) => {
@@ -50,6 +53,9 @@ export function ProfileModal({
         setNickname(p.nickname ?? '');
       })
       .catch(() => {});
+    // The Holistic mailbox lives in the mail service; pull the primary ("Stamm") address and
+    // every alias so they're visible here. Silently hidden if the user has no mail access.
+    mailApi.identity().then(setMail).catch(() => {});
   }, [open, user]);
 
   const fullName = [firstName, lastName].filter(Boolean).join(' ');
@@ -155,6 +161,24 @@ export function ProfileModal({
         <Field label="Nickname" hint="Shown across Holistic; defaults to your username">
           <Input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder={user.username} autoComplete="nickname" />
         </Field>
+        {mail && mail.addresses.length > 0 && (
+          <Field label="Email addresses" hint="Your Holistic mailbox and every alias that delivers to it">
+            <Stack gap={2}>
+              {mail.addresses.map((addr) => (
+                <Stack key={addr} direction="row" gap={2} align="center" justify="between">
+                  <Text variant="body" className="break-all">
+                    {addr}
+                  </Text>
+                  {addr === mail.primary && (
+                    <Badge variant="accent" className="shrink-0">
+                      Primary
+                    </Badge>
+                  )}
+                </Stack>
+              ))}
+            </Stack>
+          </Field>
+        )}
         {error && (
           <Text variant="footnote" color="danger">
             {error}
