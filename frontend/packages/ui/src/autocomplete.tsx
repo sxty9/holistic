@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { cn } from './lib/cn';
 import { Input } from './controls';
-import { Spinner } from './primitives';
+import { Avatar, Spinner } from './primitives';
 
 export interface AutocompleteOption {
   id: string;
   label: string; // primary line (also the value a selection writes back)
   sublabel?: string; // secondary line, e.g. an address
+  // A face for this option. Set it (even to '') to give the row an avatar slot; an empty or failing
+  // src falls back to initials, exactly as in ContactPicker. Left undefined, the row has no avatar
+  // at all, so an autocomplete over things that are not people stays a plain list.
+  avatarUrl?: string;
   data?: unknown; // opaque payload carried back to onSelect (avoids a stale shared lookup map)
 }
 
@@ -171,12 +175,15 @@ export function Autocomplete({
                   onClick={() => choose(o)}
                   onMouseEnter={() => setActive(i)}
                   className={cn(
-                    'flex w-full flex-col items-start rounded-sm px-3 py-1.5 text-left',
+                    'flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-left',
                     i === active ? 'bg-fill/10' : 'hover:bg-fill/10',
                   )}
                 >
-                  <span className="text-subhead text-text-primary">{o.label}</span>
-                  {o.sublabel && <span className="text-footnote text-text-secondary">{o.sublabel}</span>}
+                  {o.avatarUrl !== undefined && <Avatar name={o.label} src={o.avatarUrl || undefined} size={28} />}
+                  <span className="flex min-w-0 flex-col items-start">
+                    <span className="text-subhead text-text-primary">{o.label}</span>
+                    {o.sublabel && <span className="text-footnote text-text-secondary">{o.sublabel}</span>}
+                  </span>
                 </button>
               </li>
             ))
