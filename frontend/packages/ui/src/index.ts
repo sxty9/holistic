@@ -96,7 +96,7 @@ export { DataTable } from './table';
 export type { Column, DataTableProps, SortDir } from './table';
 
 // Formatting & data hooks
-export { formatPercent, formatRate, formatDuration } from './lib/format';
+export { formatPercent, formatRate, formatDuration, formatRelativeTime } from './lib/format';
 export { useLiveQuery } from './lib/useLiveQuery';
 export type { LiveQuery } from './lib/useLiveQuery';
 
