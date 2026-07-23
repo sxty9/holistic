@@ -71,6 +71,11 @@ export type { NotificationCenterProps, NotificationItem } from './notificationce
 export { ContactPicker } from './contactpicker';
 export type { ContactPickerProps, ContactOption } from './contactpicker';
 
+// AskChoice: renders a structured question an AI posed (aigentic's interactive protocol) as
+// clickable option cards inside a chat bubble, à la Claude Code. Shared by every AI chat surface.
+export { AskChoice } from './askchoice';
+export type { AskChoiceProps, AskChoiceQuestion, AskChoiceOption } from './askchoice';
+
 // Shell
 export { AppShell, Sidebar, TopBar, ContentRegion, useTheme } from './shell';
 export type { AppShellProps, SidebarProps, SidebarServiceItem, TopBarProps, ContentRegionProps } from './shell';

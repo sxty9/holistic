@@ -26,6 +26,11 @@ registerMessages({
     'common.noMatches': 'No matches',
     'common.remove': (v) => `Remove ${v.name}`,
 
+    // AskChoice — the clickable question an AI can pose inside a chat bubble
+    'ask.send': 'Send',
+    'ask.ownToggle': 'Answer in your own words',
+    'ask.ownPlaceholder': 'Type your answer…',
+
     // app shell — top-bar account menu
     'shell.account': 'Account',
     'shell.lightAppearance': 'Light appearance',
