@@ -2,6 +2,7 @@ import { forwardRef, useState, type ButtonHTMLAttributes, type InputHTMLAttribut
 import { cn } from './lib/cn';
 import { Spinner } from './primitives';
 import { EyeIcon, EyeOffIcon, SearchIcon } from './icons';
+import { useT } from './i18n';
 
 const BTN_VARIANT = {
   primary: 'bg-accent text-accent-fg hover:bg-accent-hover active:bg-accent-hover shadow-elev-1',
@@ -209,14 +210,15 @@ export function SegmentedControl<T extends string>({ options, value, onChange, c
   );
 }
 
-export function SearchField({ value, onChange, placeholder = 'Search', className }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string }) {
+export function SearchField({ value, onChange, placeholder, className }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string }) {
+  const t = useT();
   return (
     <div className={cn('relative', className)}>
       <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('common.search')}
         className={cn(inputBase, 'h-9 pl-8')}
       />
     </div>

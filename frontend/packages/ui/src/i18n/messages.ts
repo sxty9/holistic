@@ -22,6 +22,9 @@ registerMessages({
     'common.open': 'Open',
     'common.update': 'Update',
     'common.upload': 'Upload',
+    'common.search': 'Search',
+    'common.noMatches': 'No matches',
+    'common.remove': (v) => `Remove ${v.name}`,
 
     // app shell — top-bar account menu
     'shell.account': 'Account',
@@ -57,6 +60,15 @@ registerMessages({
     'files.largeFileHead': 'Showing the beginning of a large file.',
     'files.previewUnavailable': 'Preview not available',
     'files.previewUnavailableHint': 'This file type can’t be previewed here.',
+
+    // notification centre (shared @holistic/ui top-bar bell)
+    'notify.title': 'Notifications',
+    'notify.enableDesktop': 'Enable desktop notifications',
+    'notify.loading': 'Loading…',
+    'notify.empty': 'No notifications',
+
+    // contact / recipient picker (shared @holistic/ui)
+    'contact.group': (v) => `Group · ${count(v)} member${count(v) !== 1 ? 's' : ''}`,
   },
 
   de: {
@@ -73,6 +85,8 @@ registerMessages({
     'common.open': 'Öffnen',
     'common.update': 'Aktualisieren',
     'common.upload': 'Hochladen',
+    'common.noMatches': 'Keine Treffer',
+    'common.remove': (v) => `${v.name} entfernen`,
 
     'shell.account': 'Konto',
     'shell.lightAppearance': 'Helles Erscheinungsbild',
@@ -104,6 +118,15 @@ registerMessages({
     'files.largeFileHead': 'Zeigt den Anfang einer großen Datei.',
     'files.previewUnavailable': 'Keine Vorschau verfügbar',
     'files.previewUnavailableHint': 'Dieser Dateityp kann hier nicht angezeigt werden.',
+
+    // Benachrichtigungszentrale (gemeinsame @holistic/ui-Glocke in der Topbar)
+    'notify.title': 'Benachrichtigungen',
+    'notify.enableDesktop': 'Desktop-Benachrichtigungen aktivieren',
+    'notify.loading': 'Lädt…',
+    'notify.empty': 'Keine Benachrichtigungen',
+
+    // Kontakt-/Empfängerauswahl (gemeinsame @holistic/ui)
+    'contact.group': (v) => `Gruppe · ${count(v)} ${count(v) === 1 ? 'Mitglied' : 'Mitglieder'}`,
   },
 
   ja: {
