@@ -37,6 +37,7 @@ registerMessages({
     'samba.folderCreateFailed': 'Could not create folder',
     'samba.uploaded': (v) => `Uploaded ${count(v)} file${count(v) !== 1 ? 's' : ''}`,
     'samba.uploadFailed': 'Upload failed',
+    'samba.uploadPartial': (v) => `Uploaded ${v.ok} of ${v.total} — ${Number(v.total) - Number(v.ok)} failed`,
     'samba.uploadOneFailed': (v) => `Upload of ${v.name} failed`,
     'samba.clipboardMove': (v) => `Moving ${v.what} — go to a folder, then paste.`,
     'samba.clipboardCopy': (v) => `Copying ${v.what} — go to a folder, then paste.`,

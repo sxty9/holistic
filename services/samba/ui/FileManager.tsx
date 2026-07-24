@@ -241,19 +241,34 @@ export function FileManager({ user, api, apiFor, ui, nav }: ServiceContextProps)
   }
 
   async function doUpload(files: File[]) {
-    try {
-      for (const f of files) {
+    // Folders arrive as a flat File[] where each entry carries its path within the picked
+    // folder (webkitRelativePath, e.g. "Trip/Day1/a.jpg"); loose files leave it empty. Send it
+    // so the server recreates the tree. One failure (a name clash, a blocked dotfile) must not
+    // abort the rest of a large folder, so keep going and report the tally.
+    let ok = 0;
+    const failed: string[] = [];
+    for (const f of files) {
+      const rel = f.webkitRelativePath || '';
+      try {
         const fd = new FormData();
         fd.append('path', cwd);
+        if (rel) fd.append('relativePath', rel);
         fd.append('file', f);
         const res = await api.raw('fs/upload', { method: 'POST', body: fd });
-        if (!res.ok) throw new Error(t('samba.uploadOneFailed', { name: f.name }));
+        if (!res.ok) throw new Error();
+        ok += 1;
+      } catch {
+        failed.push(rel || f.name);
       }
-      ui.toast({ title: t('samba.uploaded', { count: files.length }), variant: 'success' });
-      reload();
-    } catch (e) {
-      ui.toast({ title: t('samba.uploadFailed'), description: (e as Error).message, variant: 'error' });
     }
+    if (failed.length === 0) {
+      ui.toast({ title: t('samba.uploaded', { count: ok }), variant: 'success' });
+    } else if (ok > 0) {
+      ui.toast({ title: t('samba.uploadPartial', { ok, total: files.length }), description: t('samba.uploadOneFailed', { name: failed[0] }), variant: 'error' });
+    } else {
+      ui.toast({ title: t('samba.uploadFailed'), description: t('samba.uploadOneFailed', { name: failed[0] }), variant: 'error' });
+    }
+    reload();
   }
 
   const clipboardSummary = clipboard
