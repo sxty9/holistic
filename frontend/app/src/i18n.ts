@@ -62,6 +62,28 @@ registerMessages({
     'auth.currentPassword': 'Current password',
     'auth.newPassword': 'New password',
     'auth.confirmNewPassword': 'Confirm new password',
+
+    // Profile (account) modal — English source; de/ja are filled by the nightly translation run.
+    'profile.desc': 'Manage your name and photo.',
+    'profile.save': 'Save',
+    'profile.changePhoto': 'Change photo',
+    'profile.removePhoto': 'Remove',
+    'profile.photoHint': 'PNG, JPEG, GIF or WebP, up to 5 MB.',
+    'profile.usernameHint': 'Your login name — this can’t be changed',
+    'profile.firstName': 'First name',
+    'profile.lastName': 'Last name',
+    'profile.nickname': 'Nickname',
+    'profile.nicknameHint': 'Shown across Holistic; defaults to your username',
+    'profile.emailAddresses': 'Email addresses',
+    'profile.emailHint': 'Your Holistic mailbox and every alias that delivers to it',
+    'profile.primary': 'Primary',
+    'profile.updated': 'Profile updated',
+    'profile.photoUpdated': 'Photo updated',
+    'profile.errUpdate': 'Could not update your profile.',
+    'profile.errPhotoType': 'Use a PNG, JPEG, GIF or WebP image.',
+    'profile.errPhotoSize': 'That image is too large (max 5 MB).',
+    'profile.errPhotoUpload': 'Could not upload the photo.',
+    'profile.errPhotoRemove': 'Could not remove the photo.',
   },
 
   de: {

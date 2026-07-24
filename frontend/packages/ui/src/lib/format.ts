@@ -34,3 +34,23 @@ export function formatDuration(seconds: number): string {
   else parts.push(`${sec}s`);
   return parts.slice(0, 2).join(' ');
 }
+
+/** A locale-aware "time ago" label for an ISO timestamp — "5 min ago", "3 days ago",
+ *  "now" — via Intl.RelativeTimeFormat, so every locale is rendered from the platform
+ *  without a single translation string. Past ~a week it reads better as a short absolute
+ *  date. `now` is injectable for deterministic tests; unparseable input yields "". Pure
+ *  Intl/Date (no DOM), so the shared core stays platform-neutral. */
+export function formatRelativeTime(iso: string, locale: string = 'en-US', now: number = Date.now()): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const sec = Math.round((now - then) / 1000); // > 0 in the past
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' });
+  if (Math.abs(sec) < 45) return rtf.format(0, 'second'); // "now" / "jetzt" / "今"
+  const min = Math.round(sec / 60);
+  if (Math.abs(min) < 60) return rtf.format(-min, 'minute');
+  const hour = Math.round(sec / 3600);
+  if (Math.abs(hour) < 24) return rtf.format(-hour, 'hour');
+  const day = Math.round(sec / 86400);
+  if (Math.abs(day) < 7) return rtf.format(-day, 'day');
+  return new Date(then).toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+}

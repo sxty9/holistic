@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import { cn } from './lib/cn';
 import { Avatar, Spinner } from './primitives';
 import { XIcon } from './icons';
+import { useT } from './i18n';
 
 // A contact as the picker exchanges it: the address is the value that goes on the wire; the rest is
 // display. `username` marks an internal holistic user (populated by contax's lookup). Cross-service
@@ -61,8 +62,10 @@ export function ContactPicker({
   minChars = 1,
   allowFreeText = true,
   className,
-  emptyText = 'Keine Treffer',
+  emptyText,
 }: ContactPickerProps) {
+  const t = useT();
+  const emptyLabel = emptyText ?? t('common.noMatches');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -209,7 +212,7 @@ export function ContactPicker({
             <span className="text-text-primary">{c.displayName || c.email}</span>
             <button
               type="button"
-              aria-label={`${c.displayName || c.email} entfernen`}
+              aria-label={t('common.remove', { name: c.displayName || c.email })}
               onClick={() => removeAt(i)}
               className="text-text-tertiary hover:text-text-secondary"
             >
@@ -243,7 +246,7 @@ export function ContactPicker({
           onMouseDown={(e) => e.preventDefault()}
         >
           {shown.length === 0 ? (
-            <li className="px-3 py-2 text-footnote text-text-tertiary">{emptyText}</li>
+            <li className="px-3 py-2 text-footnote text-text-tertiary">{emptyLabel}</li>
           ) : (
             shown.map((o, i) => (
               <li key={(o.groupId || o.username || norm(o.email)) + i}>
@@ -260,7 +263,7 @@ export function ContactPicker({
                   <span className="flex min-w-0 flex-col">
                     <span className="truncate text-subhead text-text-primary">{o.displayName || o.email}</span>
                     <span className="truncate text-footnote text-text-secondary">
-                      {o.kind === 'group' ? `Gruppe · ${o.memberCount ?? 0} Mitglieder` : o.email}
+                      {o.kind === 'group' ? t('contact.group', { count: o.memberCount ?? 0 }) : o.email}
                     </span>
                   </span>
                 </button>

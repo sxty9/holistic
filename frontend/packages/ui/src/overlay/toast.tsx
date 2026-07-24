@@ -1,6 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { AlertIcon, CheckIcon, InfoIcon, XIcon } from '../icons';
+import { useT } from '../i18n';
 
 export type ToastVariant = 'info' | 'success' | 'error';
 export interface ToastItem {
@@ -54,6 +55,7 @@ const ICON: Record<ToastVariant, ReactNode> = { info: <InfoIcon />, success: <Ch
 const COLOR: Record<ToastVariant, string> = { info: 'text-accent', success: 'text-success', error: 'text-danger' };
 
 export function Toaster() {
+  const tr = useT();
   const list = useSyncExternalStore(subscribe, snapshot, snapshot);
   return (
     <div className="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 w-[min(22rem,90vw)]">
@@ -73,7 +75,7 @@ export function Toaster() {
             <div className="text-footnote font-semibold text-text-primary">{t.title}</div>
             {t.description && <div className="text-caption text-text-secondary">{t.description}</div>}
           </div>
-          <button onClick={() => dismissToast(t.id)} aria-label="Dismiss" className="text-text-tertiary hover:text-text-secondary">
+          <button onClick={() => dismissToast(t.id)} aria-label={tr('common.close')} className="text-text-tertiary hover:text-text-secondary">
             <XIcon className="h-4 w-4" />
           </button>
         </div>

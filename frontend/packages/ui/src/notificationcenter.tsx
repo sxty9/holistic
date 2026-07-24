@@ -4,6 +4,8 @@ import { IconButton } from './controls';
 import { Text, Spinner } from './primitives';
 import { BellIcon } from './icons';
 import { toast, type ToastVariant } from './overlay/toast';
+import { useT, useLocale } from './i18n';
+import { formatRelativeTime } from './lib/format';
 import type { ServiceApiClient } from './plugin/contract';
 
 // One notification as notify's API returns it (mirrors notify/internal/store.Notification JSON).
@@ -38,25 +40,13 @@ const dotColor: Record<string, string> = {
   error: 'bg-danger',
 };
 
-function relativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (isNaN(then)) return '';
-  const s = Math.max(0, Math.round((Date.now() - then) / 1000));
-  if (s < 45) return 'gerade eben';
-  const m = Math.round(s / 60);
-  if (m < 60) return `vor ${m} Min`;
-  const h = Math.round(m / 60);
-  if (h < 24) return `vor ${h} Std`;
-  const d = Math.round(h / 24);
-  if (d < 7) return `vor ${d} T`;
-  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-}
-
 // NotificationCenter is the shell's top-bar bell: a live, cross-service notification hub. It lists
 // the caller's recent notifications (via the notify service), streams new ones over one always-on
 // EventSource, raises a desktop Notification when the tab is hidden (else an in-app toast), and
 // clears its unread badge when opened. Rendered in every service tab, independent of the active one.
 export function NotificationCenter({ api, onOpenUrl }: NotificationCenterProps) {
+  const t = useT();
+  const [locale] = useLocale();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -179,7 +169,7 @@ export function NotificationCenter({ api, onOpenUrl }: NotificationCenterProps) 
 
   return (
     <div className="relative">
-      <IconButton label="Benachrichtigungen" onClick={toggle}>
+      <IconButton label={t('notify.title')} onClick={toggle}>
         <span className="relative inline-flex">
           <BellIcon />
           {unread > 0 && (
@@ -197,7 +187,7 @@ export function NotificationCenter({ api, onOpenUrl }: NotificationCenterProps) 
           <div className="absolute right-0 z-50 mt-2 w-80 max-w-[90vw] overflow-hidden rounded-lg border border-separator bg-surface-raised shadow-elev-2">
             <div className="flex items-center justify-between border-b border-separator px-3 py-2">
               <Text variant="subhead" weight="semibold">
-                Benachrichtigungen
+                {t('notify.title')}
               </Text>
             </div>
 
@@ -207,7 +197,7 @@ export function NotificationCenter({ api, onOpenUrl }: NotificationCenterProps) 
                 onClick={() => Notification.requestPermission().then((p) => setPerm(p)).catch(() => {})}
                 className="w-full border-b border-separator px-3 py-2 text-left text-footnote text-accent hover:bg-fill/10"
               >
-                Desktop-Benachrichtigungen aktivieren
+                {t('notify.enableDesktop')}
               </button>
             )}
 
@@ -216,13 +206,13 @@ export function NotificationCenter({ api, onOpenUrl }: NotificationCenterProps) 
                 <div className="flex items-center justify-center gap-2 py-6">
                   <Spinner className="h-4 w-4" />
                   <Text color="secondary" variant="footnote">
-                    Lädt…
+                    {t('notify.loading')}
                   </Text>
                 </div>
               ) : items.length === 0 ? (
                 <div className="px-3 py-8 text-center">
                   <Text color="tertiary" variant="footnote">
-                    Keine Benachrichtigungen
+                    {t('notify.empty')}
                   </Text>
                 </div>
               ) : (
@@ -245,7 +235,7 @@ export function NotificationCenter({ api, onOpenUrl }: NotificationCenterProps) 
                       </span>
                       {n.body && <span className="line-clamp-2 text-footnote text-text-secondary">{n.body}</span>}
                       <span className="mt-0.5 text-caption text-text-tertiary">
-                        {n.service} · {relativeTime(n.created)}
+                        {n.service} · {formatRelativeTime(n.created, locale)}
                       </span>
                     </span>
                     {!n.read && <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', dotColor[n.level] || 'bg-accent')} />}

@@ -12,6 +12,7 @@ import {
   TrashIcon,
   UploadIcon,
   toast,
+  useT,
   type HolisticUser,
 } from '@holistic/ui';
 import { ApiError, authApi, mailApi } from '../api/holisticClient';
@@ -27,6 +28,7 @@ export function ProfileModal({
   user: HolisticUser;
   onUserChange: (u: HolisticUser) => void;
 }) {
+  const t = useT();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [nickname, setNickname] = useState('');
@@ -65,10 +67,10 @@ export function ProfileModal({
     setError(null);
     try {
       onUserChange(await authApi.updateProfile({ firstName, lastName, nickname }));
-      toast({ title: 'Profile updated', variant: 'success' });
+      toast({ title: t('profile.updated'), variant: 'success' });
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not update your profile.');
+      setError(err instanceof ApiError ? err.message : t('profile.errUpdate'));
     } finally {
       setBusy(false);
     }
@@ -82,14 +84,14 @@ export function ProfileModal({
     setError(null);
     try {
       onUserChange(await authApi.uploadAvatar(file));
-      toast({ title: 'Photo updated', variant: 'success' });
+      toast({ title: t('profile.photoUpdated'), variant: 'success' });
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 415
-          ? 'Use a PNG, JPEG, GIF or WebP image.'
+          ? t('profile.errPhotoType')
           : err instanceof ApiError && err.status === 413
-            ? 'That image is too large (max 5 MB).'
-            : 'Could not upload the photo.',
+            ? t('profile.errPhotoSize')
+            : t('profile.errPhotoUpload'),
       );
     } finally {
       setAvatarBusy(false);
@@ -102,7 +104,7 @@ export function ProfileModal({
     try {
       onUserChange(await authApi.deleteAvatar());
     } catch {
-      setError('Could not remove the photo.');
+      setError(t('profile.errPhotoRemove'));
     } finally {
       setAvatarBusy(false);
     }
@@ -112,16 +114,16 @@ export function ProfileModal({
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title="Profile"
-      description="Manage your name and photo."
+      title={t('shell.profile')}
+      description={t('profile.desc')}
       size="sm"
       footer={
         <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button variant="primary" onClick={save} loading={busy}>
-            Save
+            {t('profile.save')}
           </Button>
         </>
       }
@@ -132,37 +134,37 @@ export function ProfileModal({
           <Stack gap={2}>
             <Stack direction="row" gap={2} wrap>
               <Button size="sm" iconLeft={<UploadIcon className="h-4 w-4" />} loading={avatarBusy} onClick={() => fileRef.current?.click()}>
-                Change photo
+                {t('profile.changePhoto')}
               </Button>
               {user.avatarUrl && (
                 <Button size="sm" variant="ghost" iconLeft={<TrashIcon className="h-4 w-4" />} disabled={avatarBusy} onClick={removeAvatar}>
-                  Remove
+                  {t('profile.removePhoto')}
                 </Button>
               )}
             </Stack>
             <Text variant="caption" color="tertiary">
-              PNG, JPEG, GIF or WebP, up to 5 MB.
+              {t('profile.photoHint')}
             </Text>
           </Stack>
         </Stack>
         <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp" className="hidden" onChange={onPickAvatar} />
 
-        <Field label="Username" hint="Your login name — this can’t be changed">
+        <Field label={t('auth.username')} hint={t('profile.usernameHint')}>
           <Input value={user.username} readOnly disabled className="opacity-60" />
         </Field>
         <Grid cols={2} gap={3}>
-          <Field label="First name">
+          <Field label={t('profile.firstName')}>
             <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} autoComplete="given-name" />
           </Field>
-          <Field label="Last name">
+          <Field label={t('profile.lastName')}>
             <Input value={lastName} onChange={(e) => setLastName(e.target.value)} autoComplete="family-name" />
           </Field>
         </Grid>
-        <Field label="Nickname" hint="Shown across Holistic; defaults to your username">
+        <Field label={t('profile.nickname')} hint={t('profile.nicknameHint')}>
           <Input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder={user.username} autoComplete="nickname" />
         </Field>
         {mail && mail.addresses.length > 0 && (
-          <Field label="Email addresses" hint="Your Holistic mailbox and every alias that delivers to it">
+          <Field label={t('profile.emailAddresses')} hint={t('profile.emailHint')}>
             <Stack gap={2}>
               {mail.addresses.map((addr) => (
                 <Stack key={addr} direction="row" gap={2} align="center" justify="between">
@@ -171,7 +173,7 @@ export function ProfileModal({
                   </Text>
                   {addr === mail.primary && (
                     <Badge variant="accent" className="shrink-0">
-                      Primary
+                      {t('profile.primary')}
                     </Badge>
                   )}
                 </Stack>

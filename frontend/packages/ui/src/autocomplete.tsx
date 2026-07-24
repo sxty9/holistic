@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import { cn } from './lib/cn';
 import { Input } from './controls';
 import { Avatar, Spinner } from './primitives';
+import { useT } from './i18n';
 
 export interface AutocompleteOption {
   id: string;
@@ -40,8 +41,10 @@ export function Autocomplete({
   debounceMs = 300,
   minChars = 2,
   className,
-  emptyText = 'No matches',
+  emptyText,
 }: AutocompleteProps) {
+  const t = useT();
+  const emptyLabel = emptyText ?? t('common.noMatches');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<AutocompleteOption[]>([]);
@@ -166,7 +169,7 @@ export function Autocomplete({
           onMouseDown={(e) => e.preventDefault()}
         >
           {options.length === 0 ? (
-            <li className="px-3 py-2 text-footnote text-text-tertiary">{emptyText}</li>
+            <li className="px-3 py-2 text-footnote text-text-tertiary">{emptyLabel}</li>
           ) : (
             options.map((o, i) => (
               <li key={o.id || `${o.label}-${i}`}>
