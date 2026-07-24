@@ -42,6 +42,8 @@ registerMessages({
     'files.colModified': 'Modified',
     'files.parentFolder': 'Parent folder',
     'files.newFolder': 'New Folder',
+    'files.uploadFiles': 'Files',
+    'files.uploadFolder': 'Folder',
     'files.selected': (v) => `${count(v)} selected`,
     'files.gridView': 'Grid view',
     'files.listView': 'List view',

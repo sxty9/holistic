@@ -79,8 +79,11 @@ def stream_archive(user: str, absdir: str, names: list[str] | None = None) -> It
     yield from _pipe(_argv(user, "archive", *args), _env(user))
 
 
-def write_stream(user: str, abspath: str, src, max_bytes: int) -> dict:
-    proc = subprocess.Popen(_argv(user, "write", abspath), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_env(user))
+def write_stream(user: str, abspath: str, src, max_bytes: int, parents: bool = False) -> dict:
+    # parents=True lets the broker create the file's missing parent directories first — used
+    # when a folder upload recreates a subtree (a plain file upload leaves it False).
+    args = [abspath, "--parents"] if parents else [abspath]
+    proc = subprocess.Popen(_argv(user, "write", *args), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_env(user))
     assert proc.stdin is not None
     written = 0
     try:

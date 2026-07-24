@@ -12,7 +12,9 @@ Subcommands:
   read   <abspath> [--offset N] [--length M]      -> raw bytes on stdout
   archive <absdir> [--name N ...]                  -> streamed ZIP on stdout (whole dir, or
                                                       just the named children of it)
-  write  <absfile>                                 -> bytes from stdin (O_CREAT|O_EXCL)
+  write  <absfile> [--parents]                     -> bytes from stdin (O_CREAT|O_EXCL);
+                                                      --parents first creates missing parent
+                                                      dirs (a folder upload)
   mkdir  <absdir>
   rename <abspath> <newname>
   move   <abssrc> <absdstdir>
@@ -93,6 +95,30 @@ def validate_new(parent: str, name: str, allow_dot: bool = False) -> str:
     if not _within(target):
         fail(3, "target outside allowed roots")
     return target
+
+
+def ensure_dir(dirpath: str) -> None:
+    """Create `dirpath` and any missing ancestors — the parent chain of a folder upload.
+
+    Recurses upward so every parent exists before its child, and creates each new level
+    through validate_new, so a folder component faces the exact same rules as a typed name
+    (safe characters, no dotfiles) and can never land outside the user's roots. An existing
+    directory is reused; a non-directory already sitting in the way is a conflict.
+    """
+    real = os.path.realpath(dirpath)
+    if not _within(real):
+        fail(3, "path outside allowed roots")
+    if os.path.isdir(real):
+        return
+    if os.path.lexists(real):
+        fail(5, "path exists and is not a directory")
+    parent = os.path.dirname(real)
+    ensure_dir(parent)
+    target = validate_new(parent, os.path.basename(real))
+    try:
+        os.mkdir(target, 0o755)
+    except FileExistsError:
+        pass  # a concurrent upload of the same folder won the race — reuse it
 
 
 def _looks_text(path: str) -> bool:
@@ -261,7 +287,12 @@ def cmd_archive(a):
 
 
 def cmd_write(a):
-    target = validate_new(os.path.dirname(a.path), os.path.basename(a.path))
+    parent = os.path.dirname(a.path)
+    if a.parents:
+        # Folder upload: the file sits inside a subtree the client is recreating; realise the
+        # missing directories first so the write below finds its parent in place.
+        ensure_dir(parent)
+    target = validate_new(parent, os.path.basename(a.path))
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     try:
         fd = os.open(target, flags, 0o644)
@@ -361,10 +392,13 @@ def main() -> int:
     sa.add_argument("path")
     sa.add_argument("--name", action="append", default=[], help="archive only this child (repeatable)")
     sa.set_defaults(fn=cmd_archive)
-    for name in ("write", "mkdir"):
-        sp = sub.add_parser(name)
-        sp.add_argument("path")
-        sp.set_defaults(fn=globals()[f"cmd_{name}"])
+    sw = sub.add_parser("write")
+    sw.add_argument("path")
+    sw.add_argument("--parents", action="store_true", help="create missing parent dirs (folder upload)")
+    sw.set_defaults(fn=cmd_write)
+    smk = sub.add_parser("mkdir")
+    smk.add_argument("path")
+    smk.set_defaults(fn=cmd_mkdir)
     sren = sub.add_parser("rename")
     sren.add_argument("path")
     sren.add_argument("newname")

@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { Button } from '../controls';
-import { ChevronRightIcon, FileIcon, FileTextIcon, FolderIcon, ImageIcon, MusicIcon, PdfIcon, UploadIcon, VideoIcon } from '../icons';
+import { ChevronRightIcon, FileIcon, FilesIcon, FileTextIcon, FolderIcon, ImageIcon, MusicIcon, PdfIcon, UploadIcon, VideoIcon } from '../icons';
+import { DropdownMenu } from '../overlay/menu';
 import { useT } from '../i18n';
 import type { FileEntry } from '../plugin/contract';
 import type { TextPayload } from './viewers';
@@ -146,7 +147,9 @@ export function Breadcrumb({ segments, onNavigate }: { segments: BreadcrumbSegme
   );
 }
 
-/** Hidden file input fronted by a Button; emits the chosen File[]. */
+/** A single "Upload" access point that offers either loose files or a whole folder, fronting
+ *  two hidden inputs. Both selections arrive as one `File[]`; folder entries additionally carry
+ *  their `webkitRelativePath`, so the caller can recreate the directory tree on the server. */
 export function UploadControl({
   onFiles,
   label,
@@ -159,23 +162,41 @@ export function UploadControl({
   variant?: 'primary' | 'secondary' | 'ghost';
 }) {
   const t = useT();
-  const ref = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const dirRef = useRef<HTMLInputElement>(null);
+
+  // `webkitdirectory` turns a file input into a folder picker. It is a non-standard attribute
+  // React's JSX typings don't carry, so set it on the DOM node directly rather than via props.
+  useEffect(() => {
+    const el = dirRef.current;
+    if (el) {
+      el.setAttribute('webkitdirectory', '');
+      el.setAttribute('directory', '');
+    }
+  }, []);
+
+  const emit = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length) onFiles(files);
+    e.target.value = '';
+  };
+
   return (
     <>
-      <input
-        ref={ref}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          const files = Array.from(e.target.files ?? []);
-          if (files.length) onFiles(files);
-          e.target.value = '';
-        }}
+      <input ref={fileRef} type="file" multiple className="hidden" onChange={emit} />
+      <input ref={dirRef} type="file" multiple className="hidden" onChange={emit} />
+      <DropdownMenu
+        align="start"
+        trigger={
+          <Button variant={variant} size="sm" iconLeft={icon}>
+            {label ?? t('common.upload')}
+          </Button>
+        }
+        items={[
+          { id: 'files', label: t('files.uploadFiles'), icon: <FilesIcon />, onSelect: () => fileRef.current?.click() },
+          { id: 'folder', label: t('files.uploadFolder'), icon: <FolderIcon />, onSelect: () => dirRef.current?.click() },
+        ]}
       />
-      <Button variant={variant} size="sm" iconLeft={icon} onClick={() => ref.current?.click()}>
-        {label ?? t('common.upload')}
-      </Button>
     </>
   );
 }

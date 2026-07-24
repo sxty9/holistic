@@ -293,12 +293,27 @@ def fs_delete(body: DeleteBody, user: dict = Depends(current_user)):
 
 
 @router.post("/fs/upload", dependencies=[Depends(csrf_guard)])
-def fs_upload(path: str = Form(...), file: UploadFile = Form(...), user: dict = Depends(current_user)):
+def fs_upload(
+    path: str = Form(...),
+    file: UploadFile = Form(...),
+    relativePath: str | None = Form(None),
+    user: dict = Depends(current_user),
+):
     _require_write(user, path)
-    parent = _abspath(user["username"], path)
-    target = os.path.join(parent, os.path.basename(file.filename or "upload"))
+    if relativePath:
+        # Folder upload: the browser sends each file's path relative to the chosen folder
+        # (e.g. "Trip/Day1/a.jpg"). Resolve the whole virtual path so every component meets
+        # the same confinement checks as any target (traversal rejected, stays in-root); the
+        # broker then creates the missing parent directories as it writes. The write permission
+        # of `path` already covers it — the subtree lives under the same root.
+        target = _abspath(user["username"], f"{path.rstrip('/')}/{relativePath.lstrip('/')}")
+        parents = True
+    else:
+        parent = _abspath(user["username"], path)
+        target = os.path.join(parent, os.path.basename(file.filename or "upload"))
+        parents = False
     try:
-        written = fsclient.write_stream(user["username"], target, file.file, settings.max_upload_bytes)
+        written = fsclient.write_stream(user["username"], target, file.file, settings.max_upload_bytes, parents=parents)
     except fsclient.FsError as e:
         raise _fs_http(e)
     return {"written": [written]}
