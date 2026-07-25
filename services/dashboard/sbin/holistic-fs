@@ -34,6 +34,7 @@ import re
 import shutil
 import stat as statmod
 import sys
+import tempfile
 import zipfile
 
 SAFE_NAME = re.compile(r"^[^\x00-\x1f/\\]{1,255}$")
@@ -293,20 +294,31 @@ def cmd_write(a):
         # missing directories first so the write below finds its parent in place.
         ensure_dir(parent)
     target = validate_new(parent, os.path.basename(a.path))
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-    try:
-        fd = os.open(target, flags, 0o644)
-    except FileExistsError:
-        fail(5, "already exists")
+    if os.path.lexists(target):
+        fail(5, "already exists")  # fast path: reject a duplicate before streaming the upload
+    # Stream into a UNIQUE hidden temp beside the target, fsync, then link it into place. The
+    # temp is a dotfile, so a concurrent `list` never shows a half-written upload; the final
+    # path appears in ONE atomic step, already complete — never as a growing, partial file
+    # (Atomare Zugriffe). os.link is the race-safe dedup: it fails EEXIST if the name was taken
+    # between the check above and here, so two uploads of the same new name can't both win.
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(target), prefix=f".{os.path.basename(target)}.", suffix=".part")
     try:
         with os.fdopen(fd, "wb") as out:
             shutil.copyfileobj(sys.stdin.buffer, out, length=1024 * 1024)
-    except BaseException:
+            out.flush()
+            os.fsync(out.fileno())  # the bytes are on disk BEFORE the name can be seen
+        os.chmod(tmp, 0o644)  # mkstemp is 0600; match the mode a direct O_CREAT would have given
         try:
-            os.unlink(target)
+            os.link(tmp, target)
+        except FileExistsError:
+            fail(5, "already exists")
+    finally:
+        # Drop the temp name: on success its data lives on through `target`'s link; on any
+        # failure (stream error, EEXIST, hangup) this is the only thing left to clean up.
+        try:
+            os.unlink(tmp)
         except OSError:
             pass
-        raise
     print(json.dumps(entry_for(target)))
 
 
