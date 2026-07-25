@@ -69,6 +69,6 @@ def get_avatar(username: str, _: dict = Depends(current_user)):
         raise HTTPException(404, "No avatar")
     return Response(
         content,
-        media_type=profiles.avatar_mime(username),
+        media_type=profiles.sniff_mime(content),
         headers={"Cache-Control": "private, max-age=300"},
     )

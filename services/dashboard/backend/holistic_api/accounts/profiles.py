@@ -9,9 +9,12 @@ to empty fields.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
+import tempfile
+import threading
 from pathlib import Path
 
 from ..config import settings
@@ -22,6 +25,11 @@ USER_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 # The user-editable text fields stored per user.
 FIELDS = ("firstName", "lastName", "nickname")
 TEXT_MAX = 200  # cap on any single text field
+
+# Serializes the text store's read-modify-write. The backend runs its sync endpoints in a
+# threadpool, so two concurrent profile updates would otherwise interleave read and write and
+# lose one another's changes — the same reason sessions.py/instance.py guard their stores.
+_lock = threading.Lock()
 
 
 def _dir() -> Path:
@@ -39,7 +47,7 @@ def _avatar_path(username: str) -> Path:
 
 
 def _read_raw(username: str) -> dict:
-    """The full stored dict (incl. avatarMime), or {} when absent/unreadable."""
+    """The stored dict as-is, or {} when absent/unreadable."""
     try:
         with open(_json_path(username)) as fh:
             raw = json.load(fh)
@@ -48,12 +56,24 @@ def _read_raw(username: str) -> dict:
         return {}
 
 
+def _atomic_write(path: Path, data: bytes) -> None:
+    """Write `data` to `path` atomically. The temp file gets a UNIQUE name (not a fixed
+    `.tmp`) so concurrent writers to the same record never collide on it, and os.replace
+    means a reader sees the whole old or whole new file — never a torn, empty or missing one."""
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+        os.chmod(tmp, 0o644)  # mkstemp is 0600; keep the store's prior world-readable-by-owner mode
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
+
+
 def _write_raw(username: str, data: dict) -> None:
-    path = _json_path(username)
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "w") as fh:
-        json.dump(data, fh)
-    os.replace(tmp, path)  # atomic; a crash mid-write never leaves a half file
+    _atomic_write(_json_path(username), json.dumps(data).encode())
 
 
 def load(username: str) -> dict:
@@ -63,19 +83,24 @@ def load(username: str) -> dict:
 
 
 def save(username: str, fields: dict) -> None:
-    """Merge the given text fields into the store (avatarMime is preserved)."""
-    raw = _read_raw(username)
-    for k in FIELDS:
-        if k in fields:
-            raw[k] = (str(fields[k]) if fields[k] is not None else "").strip()[:TEXT_MAX]
-    _write_raw(username, raw)
+    """Merge the given text fields into the store, atomically.
+
+    The whole read-modify-write is taken under `_lock`, so two concurrent updates can never
+    lose each other's changes. Only the declared text FIELDS are persisted, so the pool holds
+    nothing but raw, user-entered data (any legacy derived key is dropped on the next save)."""
+    with _lock:
+        data = load(username)  # clean {FIELDS: str}
+        for k in FIELDS:
+            if k in fields:
+                data[k] = (str(fields[k]) if fields[k] is not None else "").strip()[:TEXT_MAX]
+        _write_raw(username, data)
 
 
 # --- avatar -----------------------------------------------------------------
 
 # Magic-byte sniff (no Pillow dependency) for the formats a browser produces from
-# <input type=file accept="image/*">. The stored content-type comes from the bytes,
-# never from the client-declared one.
+# <input type=file accept="image/*">. The content-type is judged from the bytes, never from
+# the client-declared one — on write to reject a bad upload, and on read to serve it.
 def _sniff(b: bytes) -> str | None:
     if b[:3] == b"\xff\xd8\xff":
         return "image/jpeg"
@@ -101,8 +126,11 @@ def avatar_url(username: str) -> str | None:
     return f"/api/account/avatar/{username}?v={v}" if v else None
 
 
-def avatar_mime(username: str) -> str:
-    return _read_raw(username).get("avatarMime") or "application/octet-stream"
+def sniff_mime(content: bytes) -> str:
+    """The content-type to serve `content` with, judged only from its own magic bytes. Derived
+    on read: the avatar file is the single source of truth for both the image and its type, so
+    nothing derived is kept in the store and the two can never fall out of sync."""
+    return _sniff(content) or "application/octet-stream"
 
 
 def read_avatar(username: str) -> bytes | None:
@@ -113,25 +141,17 @@ def read_avatar(username: str) -> bytes | None:
 
 
 def save_avatar(username: str, content: bytes) -> None:
-    """Validate the image by its bytes and store it. Raises ValueError on a bad type."""
-    mime = _sniff(content)
-    if not mime:
+    """Validate the image by its bytes and store it atomically. Raises ValueError on a bad type.
+
+    The bytes are the whole record — the type is re-derived on read (see sniff_mime) — so this
+    touches a single file with one atomic rename and needs no coordination with the text store."""
+    if not _sniff(content):
         raise ValueError("unsupported image type")
-    path = _avatar_path(username)
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "wb") as fh:
-        fh.write(content)
-    os.replace(tmp, path)
-    raw = _read_raw(username)
-    raw["avatarMime"] = mime
-    _write_raw(username, raw)
+    _atomic_write(_avatar_path(username), content)  # atomic: whole old or whole new image, never torn
 
 
 def delete_avatar(username: str) -> None:
     try:
-        _avatar_path(username).unlink()
+        _avatar_path(username).unlink()  # atomic; the type was never stored, nothing else to undo
     except OSError:
         pass
-    raw = _read_raw(username)
-    if raw.pop("avatarMime", None) is not None:
-        _write_raw(username, raw)
