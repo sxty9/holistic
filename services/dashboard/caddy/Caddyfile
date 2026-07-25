@@ -28,7 +28,7 @@ holistic.local {
 }
 
 # Cloudflare-tunnel origin: loopback-only HTTP, reachable only by cloudflared (sxgate
-# routes holistic.henrysoase.org → http://localhost:21487). Not exposed on the LAN.
+# routes holistic.example.com → http://localhost:21487). Not exposed on the LAN.
 #
 # In Caddy the host part of a site address is a *matcher*, not a bind — `127.0.0.1:21487`
 # replies only to a literal `Host: 127.0.0.1:21487` and hands every other host (the
