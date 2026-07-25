@@ -72,8 +72,8 @@ class Settings:
     # whatever domain the operator points at it, so the public origin/host is read live from
     # the (Caddy-set) forwarded headers rather than hardcoded.
     #   public_origin  — pins the full scheme://host (rare; e.g. behind an extra proxy hop).
-    #   mail_domain    — pins the canonical mail domain (e.g. apex henrysoase.org instead of
-    #                    the served holistic.henrysoase.org). Highest precedence.
+    #   mail_domain    — pins the canonical mail domain (e.g. apex example.com instead of
+    #                    the served holistic.example.com). Highest precedence.
     #   instance_path  — where the auto-learned canonical mail domain is persisted (stable
     #                    across access paths), like invites/revoked above.
     public_origin: str = os.environ.get("HOLISTIC_PUBLIC_ORIGIN", "").strip()
@@ -91,7 +91,7 @@ class Settings:
     user_delete: str = os.environ.get("HOLISTIC_USER_DELETE", "/usr/local/sbin/holistic-user-delete")
 
     cookie_secure: bool = _bool("HOLISTIC_COOKIE_SECURE", True)
-    # When set (e.g. ".henrysoase.org"), session cookies are scoped to the parent domain so
+    # When set (e.g. ".example.com"), session cookies are scoped to the parent domain so
     # sibling Holistic services on subdomains (e.g. devlab.<zone>) share one sign-in (SSO).
     # Empty default = host-only cookies (today's behavior); dev/preview unaffected.
     cookie_domain: str = os.environ.get("HOLISTIC_COOKIE_DOMAIN", "").strip()

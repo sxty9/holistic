@@ -80,8 +80,8 @@ How a service consumes it:
   `jwt-secret`/`permissions.d`) or call `/api/instance`.
 
 Overrides (env on the dashboard unit; empty = auto): `HOLISTIC_MAIL_DOMAIN` pins the
-canonical mail domain — set it when you want the apex (`henrysoase.org`) instead of the
-served host (`holistic.henrysoase.org`), or a different MX domain. `HOLISTIC_PUBLIC_ORIGIN`
+canonical mail domain — set it when you want the apex (`example.com`) instead of the
+served host (`holistic.example.com`), or a different MX domain. `HOLISTIC_PUBLIC_ORIGIN`
 pins the full `scheme://host` (rare).
 
 ## Declare permissions (rights standard)

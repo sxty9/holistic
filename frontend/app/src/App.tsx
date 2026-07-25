@@ -144,7 +144,7 @@ function Splash() {
 const SSO_BOUNCE_KEY = 'h_sso_bounce';
 
 /** Read a validated `return` target from the query string. Open-redirect–safe: the target must be
- *  on the SAME registrable zone as this dashboard (e.g. *.henrysoase.org) and same protocol, so a
+ *  on the SAME registrable zone as this dashboard (e.g. *.example.com) and same protocol, so a
  *  sibling service like DevLab can bounce the user here to sign in and get sent straight back. */
 function safeReturnUrl(): string | null {
   try {
