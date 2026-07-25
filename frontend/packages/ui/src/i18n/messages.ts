@@ -69,6 +69,9 @@ registerMessages({
 
     // contact / recipient picker (shared @holistic/ui)
     'contact.group': (v) => `Group · ${count(v)} member${count(v) !== 1 ? 's' : ''}`,
+
+    // structured question / choice (shared @holistic/ui — aigentic interactive turns)
+    'ask.confirm': 'Confirm',
   },
 
   de: {

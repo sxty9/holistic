@@ -61,6 +61,11 @@ export type { MarqueeProps } from './marquee';
 export { Autocomplete } from './autocomplete';
 export type { AutocompleteProps, AutocompleteOption } from './autocomplete';
 
+// Structured multiple-choice question: renders an assistant's interactive-turn question(s) as
+// clickable option cards in the chat bubble (à la Claude Code). Consumed by aigentic's ChatView.
+export { AskChoice } from './askchoice';
+export type { AskChoiceProps, AskOption, AskQuestion } from './askchoice';
+
 // Global notification centre (top-bar bell): live, cross-service notifications backed by the
 // notify service via apiFor('notify'). Rendered by the app shell, available on every tab.
 export { NotificationCenter } from './notificationcenter';
