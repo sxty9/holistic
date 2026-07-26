@@ -12,6 +12,8 @@ CONFIG_TOOL="$DASHBOARD_DIR/lib/holistic-config.py"
 CONFIG_DIR="/etc/holistic/config.d"
 USAGE_TOOL="$DASHBOARD_DIR/lib/holistic-usage.py"
 USAGE_DIR="/etc/holistic/usage.d"
+MCP_TOOL="$DASHBOARD_DIR/lib/holistic-mcp.py"
+MCP_DIR="/etc/holistic/mcp.d"
 
 # Shared provisioning logic (single source of truth, also used by the sudo wrappers).
 source "$DASHBOARD_DIR/lib/holistic-user.sh"
@@ -38,6 +40,7 @@ Usage:
   holistic perms list|validate      List/validate service rights manifests (permissions.d)
   holistic config list|validate     List/validate service settings manifests (config.d)
   holistic usage list|validate      List/validate service consumption manifests (usage.d)
+  holistic mcp list|validate        List/validate service MCP capability manifests (mcp.d)
   holistic help                     Show this help
 EOF
 }
@@ -112,6 +115,7 @@ install_privileged_surface() {
     install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-perms.py"  /usr/local/lib/holistic/holistic-perms.py
     install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-config.py" /usr/local/lib/holistic/holistic-config.py
     install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-usage.py"  /usr/local/lib/holistic/holistic-usage.py
+    install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-mcp.py"    /usr/local/lib/holistic/holistic-mcp.py
 
     local w
     for w in holistic-user-add holistic-user-passwd holistic-user-delete \
@@ -202,6 +206,13 @@ cmd_setup() {
         python3 "$USAGE_TOOL" validate "$USAGE_DIR" || \
             echo "[holistic] WARN: consumption manifests have issues (see above)" >&2
     fi
+
+    # And the MCP capability declarations: the central /api/mcp server serves the in-code registry,
+    # but a manifest that misdeclares a tool's backing right is a security-relevant drift worth a warning.
+    if [[ -f "$MCP_TOOL" ]]; then
+        python3 "$MCP_TOOL" validate "$MCP_DIR" || \
+            echo "[holistic] WARN: MCP manifests have issues (see above)" >&2
+    fi
     echo "[holistic] setup complete"
 }
 
@@ -231,6 +242,15 @@ cmd_usage() {
         list)     python3 "$USAGE_TOOL" list "$USAGE_DIR" ;;
         validate) python3 "$USAGE_TOOL" validate "$USAGE_DIR" ;;
         *) echo "Usage: holistic usage {list|validate}" >&2; exit 1 ;;
+    esac
+}
+
+cmd_mcp() {
+    local sub="${1:-list}"; shift || true
+    case "$sub" in
+        list)     python3 "$MCP_TOOL" list "$MCP_DIR" ;;
+        validate) python3 "$MCP_TOOL" validate "$MCP_DIR" ;;
+        *) echo "Usage: holistic mcp {list|validate}" >&2; exit 1 ;;
     esac
 }
 
@@ -392,6 +412,7 @@ main() {
         perms)          shift; cmd_perms "$@" ;;
         config)         shift; cmd_config "$@" ;;
         usage)          shift; cmd_usage "$@" ;;
+        mcp)            shift; cmd_mcp "$@" ;;
         update)         cmd_update ;;
         list)           cmd_list ;;
         status)         cmd_status ;;

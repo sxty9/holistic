@@ -111,6 +111,15 @@ install -m 0644 "$HERE/usage/dashboard.json" /etc/holistic/usage.d/dashboard.jso
 install -m 0644 "$HERE/usage/samba.json" /etc/holistic/usage.d/samba.json
 python3 "$HERE/lib/holistic-usage.py" validate /etc/holistic/usage.d
 
+# MCP standard (backend-only): services DECLARE the capabilities they expose over MCP in mcp.d
+# drop-ins (name + backing right + description). The central /api/mcp server serves the in-code
+# registry; these manifests are the auditable declaration of the surface, so the invariant "every
+# MCP capability is covered by the rights system" is checked at install time.
+echo "[dashboard] declaring MCP capabilities..."
+install -d -o holistic -g holistic -m 0755 /etc/holistic/mcp.d
+install -m 0644 "$HERE/mcp/samba.json" /etc/holistic/mcp.d/samba.json
+python3 "$HERE/lib/holistic-mcp.py" validate /etc/holistic/mcp.d
+
 echo "[dashboard] configuring Caddy..."
 install -d /etc/caddy
 install -d /etc/caddy/conf.d   # drop-in dir for per-service routes (e.g. hostek); imported by the Caddyfile
