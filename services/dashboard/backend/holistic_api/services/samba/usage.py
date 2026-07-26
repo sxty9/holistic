@@ -8,6 +8,7 @@ bounded and cached, so a poll never turns into an unbounded recursive `du` over 
 from __future__ import annotations
 
 import os
+import threading
 import time
 
 from ...config import settings
@@ -19,6 +20,9 @@ _TTL_SECONDS = 60.0
 _MAX_ENTRIES = 400_000
 
 _cache: dict[str, float | int | bool] = {"ts": -_TTL_SECONDS, "bytes": 0, "approx": False}
+# Report runs in FastAPI's threadpool, so concurrent admin polls could each start a walk on cache
+# expiry; the lock lets the first walk win and the rest reuse its fresh result.
+_lock = threading.Lock()
 
 
 def _roots() -> list[str]:
@@ -52,9 +56,11 @@ def _walk_bytes(roots: list[str]) -> tuple[int, bool]:
 
 
 def collect() -> dict[str, int]:
-    now = time.monotonic()
-    if now - float(_cache["ts"]) < _TTL_SECONDS:
+    if time.monotonic() - float(_cache["ts"]) < _TTL_SECONDS:
         return {"storageBytes": int(_cache["bytes"])}
-    total, approx = _walk_bytes(_roots())
-    _cache.update(ts=now, bytes=total, approx=approx)
-    return {"storageBytes": total}
+    with _lock:
+        # Re-check inside the lock: a walk that finished while we waited makes ours redundant.
+        if time.monotonic() - float(_cache["ts"]) >= _TTL_SECONDS:
+            total, approx = _walk_bytes(_roots())
+            _cache.update(ts=time.monotonic(), bytes=total, approx=approx)
+    return {"storageBytes": int(_cache["bytes"])}
