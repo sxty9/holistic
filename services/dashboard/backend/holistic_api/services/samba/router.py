@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Upl
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from ... import live_config
 from ...auth.deps import csrf_guard, current_user, require_permission
-from ...config import settings
 from . import fsclient, paths
 
 router = APIRouter(prefix="/api/services/samba", tags=["samba"])
@@ -201,17 +201,18 @@ def fs_raw(path: str, request: Request, user: dict = Depends(require_view)):
 @router.get("/fs/text")
 def fs_text(path: str, user: dict = Depends(require_view)):
     abspath = _abspath(user["username"], path)
+    max_text = live_config.max_text_bytes()  # centrally configurable, read live
     try:
         meta = fsclient.run_json(user["username"], "stat", abspath)
         if meta["kind"] != "file":
             raise HTTPException(400, "Not a file")
         if meta.get("viewer") not in ("text", "markdown"):
             raise HTTPException(415, "Not a text file")
-        data = b"".join(fsclient.stream(user["username"], abspath, offset=0, length=settings.max_text_bytes + 1))
+        data = b"".join(fsclient.stream(user["username"], abspath, offset=0, length=max_text + 1))
     except fsclient.FsError as e:
         raise _fs_http(e)
-    truncated = len(data) > settings.max_text_bytes
-    return {"content": data[: settings.max_text_bytes].decode("utf-8", "replace"), "truncated": truncated, "encoding": "utf-8"}
+    truncated = len(data) > max_text
+    return {"content": data[:max_text].decode("utf-8", "replace"), "truncated": truncated, "encoding": "utf-8"}
 
 
 # --- mutations (CSRF-guarded) ------------------------------------------
@@ -313,7 +314,7 @@ def fs_upload(
         target = os.path.join(parent, os.path.basename(file.filename or "upload"))
         parents = False
     try:
-        written = fsclient.write_stream(user["username"], target, file.file, settings.max_upload_bytes, parents=parents)
+        written = fsclient.write_stream(user["username"], target, file.file, live_config.max_upload_bytes(), parents=parents)
     except fsclient.FsError as e:
         raise _fs_http(e)
     return {"written": [written]}

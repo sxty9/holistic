@@ -95,6 +95,9 @@ python3 "$HERE/lib/holistic-perms.py" ensure-groups /etc/holistic/permissions.d
 echo "[dashboard] preparing configuration drop-ins..."
 install -d -o holistic -g holistic -m 0755 /etc/holistic/config.d
 install -d -o holistic -g holistic -m 0750 /var/lib/holistic/config
+# The dashboard delegates its OWN admin-tunable settings (upload/session limits) to the central
+# Configuration tab like every other service, instead of keeping them env-only.
+install -m 0644 "$HERE/config/dashboard.json" /etc/holistic/config.d/dashboard.json
 python3 "$HERE/lib/holistic-config.py" validate /etc/holistic/config.d
 
 # Consumption standard (the third mirror of the rights standard): services DECLARE which metrics

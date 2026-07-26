@@ -7,7 +7,7 @@ from ..accounts.models import PasswordChangeRequest, ProfileUpdate
 from ..accounts.users import get_user_info
 from ..auth import pam
 from ..auth.deps import csrf_guard, current_user
-from ..config import settings
+from .. import live_config
 
 router = APIRouter(prefix="/api/account", tags=["account"])
 
@@ -43,8 +43,9 @@ def update_profile(body: ProfileUpdate, user: dict = Depends(current_user)):
 
 @router.post("/avatar", dependencies=[Depends(csrf_guard)])
 async def upload_avatar(file: UploadFile = File(...), user: dict = Depends(current_user)):
-    content = await file.read(settings.max_avatar_bytes + 1)
-    if len(content) > settings.max_avatar_bytes:
+    max_avatar = live_config.max_avatar_bytes()  # centrally configurable, read live
+    content = await file.read(max_avatar + 1)
+    if len(content) > max_avatar:
         raise HTTPException(413, "Image is too large")
     try:
         profiles.save_avatar(user["username"], content)
