@@ -1,0 +1,7 @@
+{
+  "service": "samba",
+  "version": 1,
+  "metrics": [
+    { "id": "storageBytes", "label": "Stored data", "kind": "storage" }
+  ]
+}
