@@ -5,23 +5,22 @@ import {
   ConfirmRoot,
   ContentRegion,
   EmptyState,
-  HolisticMark,
   NotificationCenter,
   Sidebar,
   Spinner,
-  Text,
   Toaster,
   TopBar,
   confirm,
   serviceVisibleByDefault,
   toast,
   useT,
-  type HolisticUser,
+  type SessionUser,
   type InstanceInfo,
   type ServiceContextProps,
   type ServicePlugin,
-} from '@holistic/ui';
+} from '@holisdk/ui';
 import { authApi, instanceApi, scopedApi } from './api/holisticClient';
+import { Brand } from './brand';
 import { SERVICES, serviceById } from './registry';
 import { LoginScreen } from './auth/LoginScreen';
 import { RegisterScreen } from './auth/RegisterScreen';
@@ -50,18 +49,7 @@ class ServiceBoundary extends Component<{ children: ReactNode }, { error: boolea
   }
 }
 
-function Brand() {
-  return (
-    <div className="flex items-center gap-2">
-      <HolisticMark className="h-8 w-8" />
-      <Text variant="subhead" weight="semibold" className="tracking-[-0.01em]">
-        Holistic
-      </Text>
-    </div>
-  );
-}
-
-function Shell({ user, instance, onSignOut, onUserChange }: { user: HolisticUser; instance: InstanceInfo; onSignOut: () => void; onUserChange: (u: HolisticUser) => void }) {
+function Shell({ user, instance, onSignOut, onUserChange }: { user: SessionUser; instance: InstanceInfo; onSignOut: () => void; onUserChange: (u: SessionUser) => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const t = useT();
@@ -180,7 +168,7 @@ function returnRedirect(url: string): boolean {
 }
 
 export function App() {
-  const [user, setUser] = useState<HolisticUser | null | undefined>(undefined);
+  const [user, setUser] = useState<SessionUser | null | undefined>(undefined);
   const [view, setView] = useState<'login' | 'register'>('login');
   // Seed from the current URL so it's always valid; /api/instance refines it (e.g. the
   // canonical mailDomain, which window.location can't know).
@@ -197,7 +185,7 @@ export function App() {
   // Completes auth from the login/register screens: bounce back to the caller if asked, else render
   // the dashboard. A fresh login just re-issued the shared (domain-scoped) cookie, so the sibling
   // will see the session.
-  const completeAuth = (u: HolisticUser) => {
+  const completeAuth = (u: SessionUser) => {
     if (returnUrl && returnRedirect(returnUrl)) return;
     setUser(u);
   };

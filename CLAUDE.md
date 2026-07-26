@@ -17,6 +17,12 @@ _Automatisch aus Mercury ausgerollt. Nicht direkt bearbeiten; ändere die Axiome
 ### architecture / reuse-before-build
 - **Reuse before Build** — 1. Suche die benötigte Komponente zuerst im geteilten SDK. 2. Existiert eine ähnliche: erweitere die SDK-Komponente. 3. Existiert keine, wird sie aber domänenübergreifend gebraucht: baue sie im SDK. 4. Nur wenn sie hochspezifisch für genau diesen Service ist: baue sie lokal.
 
+### architecture / sdk-boundary
+- **SDK außerhalb der Anwendung** — Das grundlegende SDK (holisdk) lebt außerhalb jeder konsumierenden Anwendung als eigenständiges Paket. Die konsumierende Anwendung — etwa das Dashboard — enthält ausschließlich ihren anwendungsspezifischen Code und niemals das geteilte SDK.
+- **Projektneutralität des SDK** — holisdk ist nicht an eine einzelne Anwendung gebunden: Die Holistic Services Landscape nutzt es, doch es dient ebenso beliebigen weiteren Projekten. Kein holisdk-Artefakt verweist auf Anwendungs- oder Instanz-Spezifika — keine Marke, keine anwendungseigenen Ansichten, keine anwendungsgebundene Verdrahtung.
+- **Bezug ausschließlich aus holisdk** — Services beziehen geteilte Bausteine ausschließlich aus holisdk und niemals aus einer Anwendung. Eine Anwendung stellt Services keine geteilten Bausteine bereit; parallele Bezugswege zu Anwendungs-internen Bausteinen werden nie angelegt.
+- **Zuordnungsregel** — Ein Baustein gehört nach holisdk, sobald er projektneutral und über eine einzelne Anwendung hinaus wiederverwendbar ist; er gehört in die Anwendung, sobald er anwendungsspezifisch ist. Im Zweifel entscheidet die Wiederverwendbarkeit über Projektgrenzen hinweg: Wäre der Baustein für ein fremdes Projekt nützlich, gehört er nach holisdk.
+
 ### architecture / single-source-of-truth
 - **Atomare Zugriffe** — Jeder lesende und schreibende Datenzugriff erfolgt atomar — unteilbar und ohne beobachtbaren Zwischenzustand.
 - **Zugangspunkt wiederverwenden** — Existiert für eine Entität bereits ein Zugangspunkt, ist er zwingend wiederzuverwenden. Parallele Datenpfade zur selben Entität werden niemals angelegt.

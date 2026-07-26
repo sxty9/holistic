@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import type { FileEntry, HolisticUser, ServiceApiClient, ServiceUiBridge } from '../plugin/contract';
+import type { FileEntry, SessionUser, ServiceApiClient, ServiceUiBridge } from '../plugin/contract';
 import type { TextPayload } from './viewers';
 
 /** Bridges + content accessors a FilePreview host hands down so registered viewer actions can run
@@ -11,7 +11,7 @@ export interface FileViewerActionHost {
   /** A client for any sibling service, to call the contributing service's backend (e.g. aigentic). */
   apiFor: (serviceId: string) => ServiceApiClient;
   ui: ServiceUiBridge;
-  user: HolisticUser;
+  user: SessionUser;
   /** Switch the dashboard to another service's tab (cross-service handoff). */
   openService: (serviceId: string, subPath?: string) => void;
   /** Fetch the raw bytes of the file currently shown in the viewer (host-authenticated). Used for
@@ -30,7 +30,7 @@ export interface FileViewerActionContext {
   loadBytes?: () => Promise<Uint8Array>;
   apiFor: (serviceId: string) => ServiceApiClient;
   ui: ServiceUiBridge;
-  user: HolisticUser;
+  user: SessionUser;
   openService: (serviceId: string, subPath?: string) => void;
   /** Close the action panel. */
   close: () => void;
@@ -48,7 +48,7 @@ export interface FileViewerAction {
   /** Toolbar button icon. */
   icon?: ComponentType<{ className?: string }>;
   /** Visibility gate (e.g. only users holding the service's run right); omitted → always. */
-  visible?: (user: HolisticUser) => boolean;
+  visible?: (user: SessionUser) => boolean;
   /** Whether the action applies to a given file (e.g. only AI-readable types); omitted → always. */
   applies?: (entry: FileEntry) => boolean;
   /** The panel rendered when the action is opened; owns its own UX + network calls. */

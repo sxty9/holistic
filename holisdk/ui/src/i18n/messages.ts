@@ -1,4 +1,4 @@
-// The core message bundle shipped by @holistic/ui: the app shell (top-bar menu)
+// The core message bundle shipped by @holisdk/ui: the app shell (top-bar menu)
 // and the shared file-manager components. Registered on import. Services and the
 // app register their own bundles on top of this one (see registerMessages).
 
@@ -35,7 +35,7 @@ registerMessages({
     'shell.changePassword': 'Change password',
     'shell.signOut': 'Sign out',
 
-    // file manager (shared @holistic/ui components)
+    // file manager (shared @holisdk/ui components)
     'files.getInfo': 'Get Info',
     'files.loadError': 'Couldn’t load this folder',
     'files.empty': 'This folder is empty',
@@ -61,16 +61,16 @@ registerMessages({
     'files.previewUnavailable': 'Preview not available',
     'files.previewUnavailableHint': 'This file type can’t be previewed here.',
 
-    // notification centre (shared @holistic/ui top-bar bell)
+    // notification centre (shared @holisdk/ui top-bar bell)
     'notify.title': 'Notifications',
     'notify.enableDesktop': 'Enable desktop notifications',
     'notify.loading': 'Loading…',
     'notify.empty': 'No notifications',
 
-    // contact / recipient picker (shared @holistic/ui)
+    // contact / recipient picker (shared @holisdk/ui)
     'contact.group': (v) => `Group · ${count(v)} member${count(v) !== 1 ? 's' : ''}`,
 
-    // structured question / choice (shared @holistic/ui — aigentic interactive turns)
+    // structured question / choice (shared @holisdk/ui — aigentic interactive turns)
     'ask.confirm': 'Confirm',
   },
 
@@ -122,13 +122,13 @@ registerMessages({
     'files.previewUnavailable': 'Keine Vorschau verfügbar',
     'files.previewUnavailableHint': 'Dieser Dateityp kann hier nicht angezeigt werden.',
 
-    // Benachrichtigungszentrale (gemeinsame @holistic/ui-Glocke in der Topbar)
+    // Benachrichtigungszentrale (gemeinsame @holisdk/ui-Glocke in der Topbar)
     'notify.title': 'Benachrichtigungen',
     'notify.enableDesktop': 'Desktop-Benachrichtigungen aktivieren',
     'notify.loading': 'Lädt…',
     'notify.empty': 'Keine Benachrichtigungen',
 
-    // Kontakt-/Empfängerauswahl (gemeinsame @holistic/ui)
+    // Kontakt-/Empfängerauswahl (gemeinsame @holisdk/ui)
     'contact.group': (v) => `Gruppe · ${count(v)} ${count(v) === 1 ? 'Mitglied' : 'Mitglieder'}`,
   },
 

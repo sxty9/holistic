@@ -12,7 +12,7 @@ export interface StatProps {
   value: ReactNode;
   /** Small suffix after the value, e.g. "%", "GB". */
   unit?: ReactNode;
-  /** Small leading/trailing glyph (an @holistic/ui icon). */
+  /** Small leading/trailing glyph (an @holisdk/ui icon). */
   icon?: ReactNode;
   delta?: StatDelta;
   /** Anything below the value — a Sparkline, ProgressBar, or caption. */

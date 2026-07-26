@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Field, Modal, PasswordInput, Stack, Text, toast, useT } from '@holistic/ui';
+import { Button, Field, Modal, PasswordInput, Stack, Text, toast, useT } from '@holisdk/ui';
 import { ApiError, authApi } from '../api/holisticClient';
 
 export function ChangePasswordModal({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {

@@ -1,8 +1,9 @@
 {
-  "name": "@holistic/ui",
+  "name": "@holisdk/ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "description": "holisdk UI — a project-neutral React component + design-token SDK. Consumed by Holistic, but not bound to it; any host application can build on it.",
   "exports": {
     ".": "./src/index.ts",
     "./tokens.css": "./src/tokens.css",

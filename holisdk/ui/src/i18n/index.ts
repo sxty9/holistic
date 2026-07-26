@@ -1,5 +1,5 @@
 // i18n public surface. Importing this registers the core message bundle (side
-// effect of ./messages), so any consumer of @holistic/ui has the shell + file
+// effect of ./messages), so any consumer of @holisdk/ui has the shell + file
 // strings available before first render.
 import './messages';
 

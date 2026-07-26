@@ -1,36 +1,9 @@
-import { useId, type ReactNode } from 'react';
-import { cn } from './lib/cn';
+import { useId } from 'react';
+import { cn, Text } from '@holisdk/ui';
 
-/** Full-bleed backdrop for the login / register screens. */
-export function AuthScene({ children }: { children: ReactNode }) {
-  return (
-    <div className="relative min-h-full w-full flex items-center justify-center p-6 bg-bg-base overflow-hidden">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-70"
-        style={{
-          background:
-            'radial-gradient(60rem 40rem at 20% -10%, rgba(10,132,255,0.22), transparent 60%), radial-gradient(50rem 40rem at 110% 110%, rgba(52,199,89,0.16), transparent 55%), radial-gradient(44rem 32rem at 50% 122%, rgba(255,201,87,0.16), transparent 60%)',
-        }}
-      />
-      <div className="relative z-10 w-full max-w-sm">{children}</div>
-    </div>
-  );
-}
-
-/** Frosted card holding the auth form. */
-export function AuthCard({ logo, title, subtitle, children, className }: { logo?: ReactNode; title: ReactNode; subtitle?: ReactNode; children: ReactNode; className?: string }) {
-  return (
-    <div className={cn('rounded-lg border border-separator bg-material-thick [backdrop-filter:var(--material-blur)] shadow-elev-3 p-7', className)}>
-      <div className="flex flex-col items-center gap-2 mb-6 text-center">
-        {logo}
-        <h1 className="text-title2 font-semibold text-text-primary">{title}</h1>
-        {subtitle && <p className="text-footnote text-text-secondary">{subtitle}</p>}
-      </div>
-      {children}
-    </div>
-  );
-}
+// The Holistic brand identity. This is application-specific and deliberately lives in the
+// dashboard app, NOT in holisdk: a project-neutral SDK ships no product's mark. holisdk
+// provides the neutral frame (AuthScene/AuthCard accept a `logo`); the app supplies this.
 
 /** The Holistic app glyph: a golden star with a swirling orbit on a squircle tile.
     A CSS mask clips an element's box-shadow too, so the elevation lives on an
@@ -70,6 +43,19 @@ export function HolisticMark({ className }: { className?: string }) {
         <path d="M28 15.6 L28.9 17.1 L30.4 18 L28.9 18.9 L28 20.4 L27.1 18.9 L25.6 18 L27.1 17.1 Z" fill="#FFEFC4" />
       </svg>
       </div>
+    </div>
+  );
+}
+
+/** The sidebar wordmark: the glyph next to the static product name. The name is a brand
+    constant (not localized), per the per-app-distribution axiom. */
+export function Brand() {
+  return (
+    <div className="flex items-center gap-2">
+      <HolisticMark className="h-8 w-8" />
+      <Text variant="subhead" weight="semibold" className="tracking-[-0.01em]">
+        Holistic
+      </Text>
     </div>
   );
 }

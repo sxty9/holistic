@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { AuthCard, AuthScene, Button, Field, HolisticMark, InlineLink, Input, Modal, PasswordInput, Stack, Text, useT, type HolisticUser } from '@holistic/ui';
+import { AuthCard, AuthScene, Button, Field, InlineLink, Input, Modal, PasswordInput, Stack, Text, useT, type SessionUser } from '@holisdk/ui';
 import { ApiError, authApi, scopedApi } from '../api/holisticClient';
+import { HolisticMark } from '../brand';
 
-export function LoginScreen({ onSuccess, onRegister }: { onSuccess: (u: HolisticUser) => void; onRegister: () => void }) {
+export function LoginScreen({ onSuccess, onRegister }: { onSuccess: (u: SessionUser) => void; onRegister: () => void }) {
   const t = useT();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

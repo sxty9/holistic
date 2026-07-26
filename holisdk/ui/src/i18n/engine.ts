@@ -1,4 +1,4 @@
-// A tiny, dependency-free message catalog shared process-wide. @holistic/ui ships
+// A tiny, dependency-free message catalog shared process-wide. @holisdk/ui ships
 // the core bundle; every service (and the app shell) registers its own bundle at
 // module-load time via registerMessages(). Lookups fall back to English (US), then
 // to the raw key, so a missing translation degrades gracefully instead of blanking

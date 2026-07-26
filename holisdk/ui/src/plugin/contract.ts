@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 
 /** Identity of the logged-in Linux/Samba user, provided by the shell. */
-export interface HolisticUser {
+export interface SessionUser {
   username: string; // Linux account name (== Samba user)
   displayName: string; // human label for the top bar (nickname, else OS name)
   groups: string[]; // e.g. ["family","smbusers"]
@@ -47,11 +47,11 @@ export interface ServiceUiBridge {
   confirm(opts: { title: string; description?: ReactNode; danger?: boolean; confirmLabel?: string }): Promise<boolean>;
 }
 
-/** Which domain this holistic instance is currently served on, resolved at runtime so the
+/** Which domain the host application is currently served on, resolved at runtime so the
  *  app is portable across deployments (any operator, any domain, zero hardcoding).
  *  `mailDomain` is the stable, canonical domain for addresses like `user@<mailDomain>` —
- *  empty until a public domain has been observed (then a service should prompt the operator
- *  to set HOLISTIC_MAIL_DOMAIN). Source of truth: GET /api/instance. */
+ *  empty until a public domain has been observed (then the host prompts the operator to pin
+ *  its canonical mail domain). Source of truth: the host's runtime instance endpoint. */
 export interface InstanceInfo {
   origin: string; // e.g. "https://example.com"
   host: string; // e.g. "example.com"
@@ -60,7 +60,7 @@ export interface InstanceInfo {
 
 /** Props the shell passes to every service's root Component. */
 export interface ServiceContextProps {
-  user: HolisticUser;
+  user: SessionUser;
   api: ServiceApiClient;
   /** A client for any sibling service (base /api/services/<id>/), same auth/CSRF as `api`.
    *  Enables deliberate cross-service calls — e.g. the Files app invoking aigentic's /run. */
@@ -78,14 +78,14 @@ export interface ServicePlugin {
   displayName: string;
   /** Sidebar icon — an SDK component (never raw svg in a service). */
   icon: ComponentType<{ className?: string }>;
-  /** The mounted root. Receives ServiceContextProps; renders ONLY @holistic/ui. */
+  /** The mounted root. Receives ServiceContextProps; renders ONLY @holisdk/ui. */
   Component: ComponentType<ServiceContextProps>;
   /** Optional visibility gate. When OMITTED the shell applies the default rights gate
    *  (`serviceVisibleByDefault`): the tab is shown only to admins or users holding at least
    *  one of the service's `hp_<id>_*` rights — so a service the user has no rights for never
    *  clutters the sidebar. Define this only for services whose access right doesn't follow
    *  the `hp_<id>_*` convention (e.g. privleg's `hp_priv_*`, or remshel's shell-type right). */
-  visible?(user: HolisticUser): boolean;
+  visible?(user: SessionUser): boolean;
   /** Optional sidebar ordering hint; lower = higher. Default 100. */
   order?: number;
 }
@@ -187,7 +187,7 @@ export interface PermissionManifest {
 /** Additive enforcement rule, shared by every service UI and the privleg editor.
  *  A host without privleg has empty `hp_*` groups, so non-admins resolve to
  *  admin-only — identical to pre-rights-standard behaviour. */
-export function userHasRight(user: Pick<HolisticUser, 'isAdmin' | 'groups'>, group: string): boolean {
+export function userHasRight(user: Pick<SessionUser, 'isAdmin' | 'groups'>, group: string): boolean {
   return user.isAdmin || user.groups.includes(group);
 }
 
@@ -197,6 +197,6 @@ export function userHasRight(user: Pick<HolisticUser, 'isAdmin' | 'groups'>, gro
  *  any such group means "has a right for this service". A service the user has no rights for
  *  is hidden — no empty, unusable tab. (Services whose rights don't follow the convention —
  *  privleg's `hp_priv_*`, remshel's shell-type right — supply their own `visible` instead.) */
-export function serviceVisibleByDefault(user: Pick<HolisticUser, 'isAdmin' | 'groups'>, serviceId: string): boolean {
+export function serviceVisibleByDefault(user: Pick<SessionUser, 'isAdmin' | 'groups'>, serviceId: string): boolean {
   return user.isAdmin || user.groups.some((g) => g.startsWith(`hp_${serviceId}_`));
 }

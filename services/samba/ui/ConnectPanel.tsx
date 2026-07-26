@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CodeBlock, Panel, SegmentedControl, Stack, Text, useT, type HolisticUser } from '@holistic/ui';
+import { CodeBlock, Panel, SegmentedControl, Stack, Text, useT, type SessionUser } from '@holisdk/ui';
 
 type OS = 'windows' | 'macos' | 'linux';
 
@@ -10,7 +10,7 @@ function detectOS(): OS {
   return 'macos';
 }
 
-export function ConnectPanel({ user }: { user: HolisticUser }) {
+export function ConnectPanel({ user }: { user: SessionUser }) {
   const t = useT();
   const [os, setOS] = useState<OS>(detectOS());
   const host = window.location.hostname || '<server-ip>';

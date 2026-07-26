@@ -650,7 +650,7 @@ export function RichTextEditor({
           onKeyUp={onSelectionActivity}
           onMouseUp={onSelectionActivity}
           onFocus={onSelectionActivity}
-          className="holistic-rte h-full overflow-auto px-3 py-2 text-body leading-relaxed text-text-primary outline-none"
+          className="holisdk-rte h-full overflow-auto px-3 py-2 text-body leading-relaxed text-text-primary outline-none"
           style={{ minHeight, maxHeight }}
         />
         {empty && (

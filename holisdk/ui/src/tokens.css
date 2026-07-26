@@ -187,25 +187,25 @@ body {
 }
 
 /* RichTextEditor content styling — restores list/quote/link rendering inside the contentEditable
-   surface (Tailwind preflight otherwise strips list markers and margins). Scoped to .holistic-rte. */
-.holistic-rte ul { list-style: disc; margin: 0 0 0 1.25rem; padding: 0; }
-.holistic-rte ol { list-style: decimal; margin: 0 0 0 1.25rem; padding: 0; }
-.holistic-rte li { margin: 0.125rem 0; }
-.holistic-rte a { color: rgb(var(--accent) / 1); text-decoration: underline; }
-.holistic-rte b, .holistic-rte strong { font-weight: 600; }
-.holistic-rte blockquote {
+   surface (Tailwind preflight otherwise strips list markers and margins). Scoped to .holisdk-rte. */
+.holisdk-rte ul { list-style: disc; margin: 0 0 0 1.25rem; padding: 0; }
+.holisdk-rte ol { list-style: decimal; margin: 0 0 0 1.25rem; padding: 0; }
+.holisdk-rte li { margin: 0.125rem 0; }
+.holisdk-rte a { color: rgb(var(--accent) / 1); text-decoration: underline; }
+.holisdk-rte b, .holisdk-rte strong { font-weight: 600; }
+.holisdk-rte blockquote {
   margin: 0.25rem 0 0.25rem 0.25rem;
   padding-left: 0.75rem;
   border-left: 3px solid var(--separator);
   color: var(--text-secondary);
 }
-.holistic-rte:focus { outline: none; }
+.holisdk-rte:focus { outline: none; }
 
 /* RichTextEditor: headings, tables, images, rules — so the WYSIWYG matches what is sent. */
-.holistic-rte h1 { font-size: 1.5em; font-weight: 700; margin: 0.4em 0 0.2em; }
-.holistic-rte h2 { font-size: 1.25em; font-weight: 700; margin: 0.4em 0 0.2em; }
-.holistic-rte h3 { font-size: 1.1em; font-weight: 600; margin: 0.4em 0 0.2em; }
-.holistic-rte img { max-width: 100%; height: auto; }
-.holistic-rte table { border-collapse: collapse; }
-.holistic-rte td, .holistic-rte th { border: 1px solid var(--separator); padding: 6px 8px; min-width: 2.5em; }
-.holistic-rte hr { border: none; border-top: 1px solid var(--separator); margin: 0.7em 0; }
+.holisdk-rte h1 { font-size: 1.5em; font-weight: 700; margin: 0.4em 0 0.2em; }
+.holisdk-rte h2 { font-size: 1.25em; font-weight: 700; margin: 0.4em 0 0.2em; }
+.holisdk-rte h3 { font-size: 1.1em; font-weight: 600; margin: 0.4em 0 0.2em; }
+.holisdk-rte img { max-width: 100%; height: auto; }
+.holisdk-rte table { border-collapse: collapse; }
+.holisdk-rte td, .holisdk-rte th { border: 1px solid var(--separator); padding: 6px 8px; min-width: 2.5em; }
+.holisdk-rte hr { border: none; border-top: 1px solid var(--separator); margin: 0.7em 0; }
