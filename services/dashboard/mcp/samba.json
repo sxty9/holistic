@@ -1,0 +1,9 @@
+{
+  "service": "samba",
+  "version": 1,
+  "tools": [
+    { "name": "samba.list_directory", "right": "hp_samba_view", "description": "List the files and folders at a virtual path." },
+    { "name": "samba.stat", "right": "hp_samba_view", "description": "Get metadata (kind, size, mtime, mime, viewer) for a file or folder." },
+    { "name": "samba.read_text_file", "right": "hp_samba_view", "description": "Read the UTF-8 text content of a text or markdown file." }
+  ]
+}
