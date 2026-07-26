@@ -15,6 +15,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from ..auth.deps import current_user
 from . import McpError, require, text, tools_for
@@ -103,9 +104,12 @@ async def mcp_endpoint(request: Request, user: dict = Depends(current_user)):
     except Exception:
         return JSONResponse(_error(None, -32700, "Parse error"))
 
+    # Tool handlers make blocking calls (e.g. the samba broker), so dispatch runs in the threadpool
+    # to keep the single-worker event loop free — the same contract FastAPI gives sync endpoints.
     if isinstance(payload, list):
-        responses = [r for r in (_dispatch(m, user) for m in payload) if r is not None]
+        results = [await run_in_threadpool(_dispatch, m, user) for m in payload]
+        responses = [r for r in results if r is not None]
         return JSONResponse(responses) if responses else Response(status_code=202)
 
-    resp = _dispatch(payload, user)
+    resp = await run_in_threadpool(_dispatch, payload, user)
     return JSONResponse(resp) if resp is not None else Response(status_code=202)
