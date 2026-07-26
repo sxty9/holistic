@@ -6,6 +6,7 @@ import time
 
 import jwt
 
+from .. import live_config
 from ..config import settings
 
 
@@ -14,12 +15,12 @@ def _now() -> int:
 
 
 def issue_access(username: str) -> str:
-    return jwt.encode({"sub": username, "type": "access", "exp": _now() + settings.access_ttl}, settings.secret, algorithm="HS256")
+    return jwt.encode({"sub": username, "type": "access", "exp": _now() + live_config.access_ttl()}, settings.secret, algorithm="HS256")
 
 
 def issue_refresh(username: str, sid: str | None = None) -> tuple[str, str]:
     sid = sid or secrets.token_hex(16)
-    token = jwt.encode({"sub": username, "type": "refresh", "sid": sid, "exp": _now() + settings.refresh_ttl}, settings.secret, algorithm="HS256")
+    token = jwt.encode({"sub": username, "type": "refresh", "sid": sid, "exp": _now() + live_config.refresh_ttl()}, settings.secret, algorithm="HS256")
     return token, sid
 
 

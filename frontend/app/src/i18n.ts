@@ -9,6 +9,9 @@ registerMessages({
     'app.serviceErrorDesc': 'This service ran into an error. Try switching away and back.',
     'app.noServicesTitle': 'No services installed',
     'app.noServicesDesc': 'Add a service and rebuild the dashboard.',
+    // The dashboard delegates its own settings to the central Configuration tab; this labels
+    // its section there (its per-setting labels come from config.d/dashboard.json verbatim).
+    'service.dashboard': 'Dashboard',
 
     // Login
     'auth.loginTitle': 'Welcome to Holistic',

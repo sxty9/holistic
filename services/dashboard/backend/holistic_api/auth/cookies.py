@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from fastapi import Response
 
+from .. import live_config
 from ..config import settings
 
 ACCESS = "h_access"
@@ -19,10 +20,11 @@ def set_session(resp: Response, access: str, refresh: str, csrf: str) -> None:
         # shadow the fresh cookie on parse.
         for name, path in ((ACCESS, "/"), (REFRESH, "/api/auth"), (CSRF, "/")):
             resp.delete_cookie(name, path=path)
-    resp.set_cookie(ACCESS, access, httponly=True, max_age=settings.access_ttl, path="/", **common)
-    resp.set_cookie(REFRESH, refresh, httponly=True, max_age=settings.refresh_ttl, path="/api/auth", **common)
+    access_ttl, refresh_ttl = live_config.access_ttl(), live_config.refresh_ttl()
+    resp.set_cookie(ACCESS, access, httponly=True, max_age=access_ttl, path="/", **common)
+    resp.set_cookie(REFRESH, refresh, httponly=True, max_age=refresh_ttl, path="/api/auth", **common)
     # Readable by JS so the SPA can echo it as X-CSRF-Token (double-submit).
-    resp.set_cookie(CSRF, csrf, httponly=False, max_age=settings.refresh_ttl, path="/", **common)
+    resp.set_cookie(CSRF, csrf, httponly=False, max_age=refresh_ttl, path="/", **common)
 
 
 def clear_session(resp: Response) -> None:
