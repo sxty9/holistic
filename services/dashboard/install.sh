@@ -97,6 +97,17 @@ install -d -o holistic -g holistic -m 0755 /etc/holistic/config.d
 install -d -o holistic -g holistic -m 0750 /var/lib/holistic/config
 python3 "$HERE/lib/holistic-config.py" validate /etc/holistic/config.d
 
+# Consumption standard (the third mirror of the rights standard): services DECLARE which metrics
+# they report in usage.d drop-ins; each service WRITES its current values into the passive report
+# pool /var/lib/holistic/usage (one file per service), which the dashboard's Consumption tab READS
+# and aggregates. It unifies AI-token, compute and storage telemetry behind one surface.
+echo "[dashboard] declaring consumption metrics..."
+install -d -o holistic -g holistic -m 0755 /etc/holistic/usage.d
+install -d -o holistic -g holistic -m 0750 /var/lib/holistic/usage
+install -m 0644 "$HERE/usage/dashboard.json" /etc/holistic/usage.d/dashboard.json
+install -m 0644 "$HERE/usage/samba.json" /etc/holistic/usage.d/samba.json
+python3 "$HERE/lib/holistic-usage.py" validate /etc/holistic/usage.d
+
 echo "[dashboard] configuring Caddy..."
 install -d /etc/caddy
 install -d /etc/caddy/conf.d   # drop-in dir for per-service routes (e.g. hostek); imported by the Caddyfile

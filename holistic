@@ -10,6 +10,8 @@ PERMS_TOOL="$DASHBOARD_DIR/lib/holistic-perms.py"
 PERMS_DIR="/etc/holistic/permissions.d"
 CONFIG_TOOL="$DASHBOARD_DIR/lib/holistic-config.py"
 CONFIG_DIR="/etc/holistic/config.d"
+USAGE_TOOL="$DASHBOARD_DIR/lib/holistic-usage.py"
+USAGE_DIR="/etc/holistic/usage.d"
 
 # Shared provisioning logic (single source of truth, also used by the sudo wrappers).
 source "$DASHBOARD_DIR/lib/holistic-user.sh"
@@ -35,6 +37,7 @@ Usage:
   holistic status                   Show whether each service is running
   holistic perms list|validate      List/validate service rights manifests (permissions.d)
   holistic config list|validate     List/validate service settings manifests (config.d)
+  holistic usage list|validate      List/validate service consumption manifests (usage.d)
   holistic help                     Show this help
 EOF
 }
@@ -108,6 +111,7 @@ install_privileged_surface() {
     install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-invites.py" /usr/local/lib/holistic/holistic-invites.py
     install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-perms.py"  /usr/local/lib/holistic/holistic-perms.py
     install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-config.py" /usr/local/lib/holistic/holistic-config.py
+    install -D -m 0755 "$DASHBOARD_DIR/lib/holistic-usage.py"  /usr/local/lib/holistic/holistic-usage.py
 
     local w
     for w in holistic-user-add holistic-user-passwd holistic-user-delete \
@@ -191,6 +195,13 @@ cmd_setup() {
         python3 "$CONFIG_TOOL" validate "$CONFIG_DIR" || \
             echo "[holistic] WARN: configuration manifests have issues (see above)" >&2
     fi
+
+    # Same for the consumption metrics every service declared: the Consumption tab renders and
+    # aggregates against these manifests, so a broken one is worth a warning.
+    if [[ -f "$USAGE_TOOL" ]]; then
+        python3 "$USAGE_TOOL" validate "$USAGE_DIR" || \
+            echo "[holistic] WARN: consumption manifests have issues (see above)" >&2
+    fi
     echo "[holistic] setup complete"
 }
 
@@ -211,6 +222,15 @@ cmd_config() {
         list)     python3 "$CONFIG_TOOL" list "$CONFIG_DIR" ;;
         validate) python3 "$CONFIG_TOOL" validate "$CONFIG_DIR" ;;
         *) echo "Usage: holistic config {list|validate}" >&2; exit 1 ;;
+    esac
+}
+
+cmd_usage() {
+    local sub="${1:-list}"; shift || true
+    case "$sub" in
+        list)     python3 "$USAGE_TOOL" list "$USAGE_DIR" ;;
+        validate) python3 "$USAGE_TOOL" validate "$USAGE_DIR" ;;
+        *) echo "Usage: holistic usage {list|validate}" >&2; exit 1 ;;
     esac
 }
 
@@ -371,6 +391,7 @@ main() {
         invite)         shift; cmd_invite "$@" ;;
         perms)          shift; cmd_perms "$@" ;;
         config)         shift; cmd_config "$@" ;;
+        usage)          shift; cmd_usage "$@" ;;
         update)         cmd_update ;;
         list)           cmd_list ;;
         status)         cmd_status ;;

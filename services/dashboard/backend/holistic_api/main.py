@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from .routers import account, admin, auth, instance
 from .services.config import router as config_router
 from .services.samba import router as samba_router
+from .services.usage import router as usage_router
 
 
 def create_app() -> FastAPI:
@@ -16,6 +17,7 @@ def create_app() -> FastAPI:
     app.include_router(instance.router)
     app.include_router(samba_router.router)
     app.include_router(config_router.router)
+    app.include_router(usage_router.router)
 
     @app.get("/api/health")
     def health():

@@ -67,6 +67,17 @@ class Settings:
     config_manifests_dir: str = os.environ.get("HOLISTIC_CONFIG_DIR", "/etc/holistic/config.d")
     config_values_dir: str = os.environ.get("HOLISTIC_CONFIG_VALUES", "/var/lib/holistic/config")
     config_group: str = os.environ.get("HOLISTIC_CONFIG_GROUP", "holistic")
+    # Consumption standard (the third mirror of the rights standard, see
+    # services/usage/router.py). It unifies the three consumption interfaces —
+    # AI tokens, compute and storage — behind one drop-in surface:
+    #   usage_manifests_dir — services DECLARE which metrics they report (kind + label),
+    #                         one drop-in per service (read-only to the dashboard), like
+    #                         permissions.d / config.d.
+    #   usage_values_dir    — the passive report pool: every service WRITES its current
+    #                         measured values here, one file per service; the dashboard only
+    #                         READS + aggregates them. The service reports; evaluation is outside.
+    usage_manifests_dir: str = os.environ.get("HOLISTIC_USAGE_DIR", "/etc/holistic/usage.d")
+    usage_values_dir: str = os.environ.get("HOLISTIC_USAGE_VALUES", "/var/lib/holistic/usage")
     # Runtime domain awareness (see instance.py). All optional → zero-config: empty means
     # "derive from the incoming request". holistic is served same-origin behind Caddy on
     # whatever domain the operator points at it, so the public origin/host is read live from
