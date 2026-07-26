@@ -13,6 +13,10 @@ dist/
 # External service-UI plugins linked in at install time (e.g. hostek)
 frontend/external/
 
+# The project-neutral SDK (holisdk) lives OUTSIDE this repo as a sibling and is linked in
+# here at setup time (a symlink), exactly like the service-UI plugins above.
+/holisdk
+
 # Python
 __pycache__/
 *.pyc

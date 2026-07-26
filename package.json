@@ -2,7 +2,7 @@
   "name": "holistic-workspace",
   "private": true,
   "type": "module",
-  "comment": "Repo-root pnpm workspace. Spans the project-neutral SDK (holisdk/*) and the Holistic dashboard (frontend/app). holisdk is a top-level sibling — not part of the dashboard — and can be split into its own repo later.",
+  "comment": "Repo-root pnpm workspace for the Holistic dashboard (frontend/app). The project-neutral SDK (holisdk/*) is NOT vendored here: holisdk is its own repo, linked in as a sibling at setup time (see .gitignore /holisdk + services/dashboard/install.sh) and consumed as @holisdk/ui. The dashboard is application-specific; the SDK never lives inside it (architecture / sdk-boundary).",
   "scripts": {
     "dev": "pnpm --filter @holistic/app dev",
     "build": "pnpm --filter @holistic/app build",

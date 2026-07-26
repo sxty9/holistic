@@ -52,6 +52,20 @@ if [[ ! -s /etc/holistic/jwt-secret ]]; then
 fi
 
 echo "[dashboard] building frontend..."
+# The project-neutral SDK (holisdk) is NOT vendored here — it lives OUTSIDE this repo as a
+# sibling (architecture / sdk-boundary). Link it in so the pnpm workspace + bundler alias
+# resolve @holisdk/ui through holisdk/ui, mirroring how service-UI plugins are linked under
+# frontend/external. Self-healing: (re)establish the link on every build.
+if [ ! -e "$REPO_ROOT/holisdk/ui/package.json" ]; then
+    echo "[dashboard] locating the holisdk SDK (sibling repo)..."
+    HOLISDK=""
+    for c in "$REPO_ROOT/../holisdk" /code/holisdk "$HOME/holisdk" /home/*/holisdk; do
+        if [ -e "$c/ui/package.json" ]; then HOLISDK="$(cd "$c" && pwd)"; break; fi
+    done
+    [ -n "$HOLISDK" ] || { echo "[dashboard] ERROR: holisdk SDK not found — clone it as a sibling (../holisdk)" >&2; exit 1; }
+    ln -sfn "$HOLISDK" "$REPO_ROOT/holisdk"
+    echo "[dashboard] linked holisdk SDK: $REPO_ROOT/holisdk -> $HOLISDK"
+fi
 # The pnpm workspace root is the REPO ROOT: it spans the project-neutral SDK (holisdk/*) and
 # the dashboard app (frontend/app), and the build intentionally reaches sibling paths
 # (e.g. services/*/ui), so it must run inside the repo — not an isolated copy.

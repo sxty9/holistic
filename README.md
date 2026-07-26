@@ -163,11 +163,14 @@ holistic                        CLI entry point
 services/manifest               install order
 services/<name>/install.sh      per-service setup
 services/<name>/ui/             optional dashboard UI (a @holisdk/ui plugin)
-holisdk/                        project-neutral SDK — @holisdk/ui (its own README)
+holisdk/                        symlink to the external holisdk SDK repo (linked at setup; git-ignored)
 frontend/app/                   dashboard SPA (@holistic/app), consumes @holisdk/ui
 ```
 
-The pnpm workspace root is this repo root; it spans `holisdk/*` and `frontend/app`. `holisdk`
-is a top-level sibling of the dashboard — not part of it — and is deliberately project-neutral
-so it can serve other projects (and be split into its own repo later). Services consume shared
-building blocks **only** from `@holisdk/ui`, never from the dashboard.
+The pnpm workspace root is this repo root; it spans `holisdk/*` and `frontend/app`. The
+project-neutral SDK **holisdk lives in its own repo, outside this one** (`architecture /
+sdk-boundary`): the dashboard holds only application-specific code and never the shared SDK.
+holisdk is linked in at `holisdk/` — a sibling symlink created at setup, exactly like the
+service-UI plugins under `frontend/external/` — and the workspace resolves `@holisdk/ui`
+through it. Services and the dashboard consume shared building blocks **only** from
+`@holisdk/ui`, never from one another.

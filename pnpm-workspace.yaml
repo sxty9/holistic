@@ -1,6 +1,7 @@
-# Workspace root = repo root, so the project-neutral SDK (holisdk/*) sits OUTSIDE the
-# Holistic dashboard (frontend/app) as a top-level sibling — extractable into its own repo
-# later — while still being consumed in-workspace via `workspace:*`.
+# Workspace root = repo root. The project-neutral SDK holisdk lives in its OWN repo, OUTSIDE
+# this one; it is linked in at `holisdk/` as a sibling symlink at setup time (see
+# services/dashboard/install.sh + .gitignore /holisdk). The glob `holisdk/*` then resolves
+# @holisdk/ui through that link, consumed in-workspace via `workspace:*`.
 packages:
   - holisdk/*
   - frontend/app
