@@ -23,6 +23,7 @@ import json
 import os
 import re
 import tempfile
+import threading
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -41,6 +42,15 @@ router = APIRouter(prefix="/api/services/config", tags=["config"], dependencies=
 SERVICE_RE = re.compile(r"^[a-z][a-z0-9]{2,19}$")
 SETTING_RE = re.compile(r"^[a-z][a-zA-Z0-9_]*$")
 TYPES = ("string", "int", "bool", "enum", "secret")
+
+# Serializes the values pool's read-modify-write. put_values does read (_saved) → merge →
+# write (_write); the backend runs its sync endpoints in a threadpool, so two concurrent admin
+# edits to the same service would otherwise interleave and lose one another's changes (a lost
+# update) — the same reason profiles.py/sessions.py/instance.py guard their stores. The dashboard
+# is the sole writer of the values files (the CLI only validates/lists), so a single in-process
+# lock makes each edit atomic; config edits are rare admin actions, so one global lock across
+# services is imperceptible and matches the house style.
+_lock = threading.Lock()
 
 
 def _valid_setting(s: Any) -> bool:
@@ -227,11 +237,17 @@ def get_values(service: str):
 def put_values(service: str, body: ValuesBody):
     m = _manifest(service)
     decls = _decls(m)
-    merged = {sid: v for sid, v in _saved(service).items() if sid in decls}
-    for sid, value in body.settings.items():
-        decl = decls.get(sid)
-        if decl is None:
-            raise HTTPException(400, f"Unknown setting '{sid}'")
-        merged[sid] = _coerce(decl, value)
-    _write(service, merged)
-    return {"service": service, "settings": _effective(m)}
+    # Atomic read-modify-write: hold `_lock` across the read (_saved), the merge and the write
+    # so two concurrent edits to the same service cannot interleave and lose one another. The
+    # response's _effective read stays inside the lock too, so it reflects exactly what we wrote
+    # (no other writer slips in between). Validation raises before _write, leaving the pool
+    # untouched — the released lock never guards a half-applied change.
+    with _lock:
+        merged = {sid: v for sid, v in _saved(service).items() if sid in decls}
+        for sid, value in body.settings.items():
+            decl = decls.get(sid)
+            if decl is None:
+                raise HTTPException(400, f"Unknown setting '{sid}'")
+            merged[sid] = _coerce(decl, value)
+        _write(service, merged)
+        return {"service": service, "settings": _effective(m)}
