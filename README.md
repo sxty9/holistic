@@ -73,7 +73,7 @@ of truth:
 
 How a service consumes it:
 
-- **UI plugin:** read `props.instance` (`InstanceInfo` in `@holistic/ui`) — e.g.
+- **UI plugin:** read `props.instance` (`InstanceInfo` in `@holisdk/ui`) — e.g.
   `` `${user.username}@${instance.mailDomain}` ``. If `mailDomain` is `""`, prompt the
   operator to set `HOLISTIC_MAIL_DOMAIN`.
 - **Service daemon:** read `/var/lib/holistic/instance.json` (shared state, like
@@ -117,7 +117,7 @@ admin-only; privleg grants it per user), or `default:true` for an action open to
 everyone now (provisioning grants it to all users ⇒ unchanged; privleg revokes it
 per user). Enforce with `isAdmin || group ∈ user.groups` either way. The TypeScript
 shapes are `PermissionManifest`/`PermissionCategory`/`PermissionDecl` in
-`@holistic/ui`. Validate with `holistic perms validate`.
+`@holisdk/ui`. Validate with `holistic perms validate`.
 
 ## Declare configuration (config standard)
 
@@ -162,6 +162,12 @@ saving. Validate with `holistic config validate`.
 holistic                        CLI entry point
 services/manifest               install order
 services/<name>/install.sh      per-service setup
-services/<name>/ui/             optional dashboard UI (a @holistic/ui plugin)
-frontend/                       dashboard SPA + @holistic/ui SDK
+services/<name>/ui/             optional dashboard UI (a @holisdk/ui plugin)
+holisdk/                        project-neutral SDK — @holisdk/ui (its own README)
+frontend/app/                   dashboard SPA (@holistic/app), consumes @holisdk/ui
 ```
+
+The pnpm workspace root is this repo root; it spans `holisdk/*` and `frontend/app`. `holisdk`
+is a top-level sibling of the dashboard — not part of it — and is deliberately project-neutral
+so it can serve other projects (and be split into its own repo later). Services consume shared
+building blocks **only** from `@holisdk/ui`, never from the dashboard.

@@ -62,17 +62,17 @@ export { Autocomplete } from './autocomplete';
 export type { AutocompleteProps, AutocompleteOption } from './autocomplete';
 
 // Structured multiple-choice question: renders an assistant's interactive-turn question(s) as
-// clickable option cards in the chat bubble (à la Claude Code). Consumed by aigentic's ChatView.
+// clickable option cards in a chat bubble (à la Claude Code). Fed by the host application.
 export { AskChoice } from './askchoice';
 export type { AskChoiceProps, AskOption, AskQuestion } from './askchoice';
 
-// Global notification centre (top-bar bell): live, cross-service notifications backed by the
-// notify service via apiFor('notify'). Rendered by the app shell, available on every tab.
+// Global notification centre (top-bar bell): live, cross-source notifications. Backed by an
+// injected API client, so the host wires it to whichever service supplies notifications.
 export { NotificationCenter } from './notificationcenter';
 export type { NotificationCenterProps, NotificationItem } from './notificationcenter';
 
-// Contact/recipient picker: avatar-aware multi-select type-ahead used by mail (To/Cc/Bcc) and
-// icaly (attendees), backed by contax's directory via apiFor('contax').
+// Contact/recipient picker: avatar-aware multi-select type-ahead (e.g. To/Cc/Bcc, attendees),
+// backed by an injected directory API client the host provides.
 export { ContactPicker } from './contactpicker';
 export type { ContactPickerProps, ContactOption } from './contactpicker';
 
@@ -80,8 +80,8 @@ export type { ContactPickerProps, ContactOption } from './contactpicker';
 export { AppShell, Sidebar, TopBar, ContentRegion, useTheme } from './shell';
 export type { AppShellProps, SidebarProps, SidebarServiceItem, TopBarProps, ContentRegionProps } from './shell';
 
-// Auth
-export { AuthScene, AuthCard, HolisticMark } from './auth';
+// Auth (neutral scaffolding — AuthCard takes a `logo`; the host supplies its own brand mark)
+export { AuthScene, AuthCard } from './auth';
 
 // Code
 export { CodeBlock } from './code';

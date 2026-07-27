@@ -13,8 +13,8 @@ import {
   UploadIcon,
   toast,
   useT,
-  type HolisticUser,
-} from '@holistic/ui';
+  type SessionUser,
+} from '@holisdk/ui';
 import { ApiError, authApi, mailApi } from '../api/holisticClient';
 
 export function ProfileModal({
@@ -25,8 +25,8 @@ export function ProfileModal({
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  user: HolisticUser;
-  onUserChange: (u: HolisticUser) => void;
+  user: SessionUser;
+  onUserChange: (u: SessionUser) => void;
 }) {
   const t = useT();
   const [firstName, setFirstName] = useState('');

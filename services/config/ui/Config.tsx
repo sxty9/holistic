@@ -18,7 +18,7 @@ import {
   type ServiceApiClient,
   type ServiceContextProps,
   type ServiceUiBridge,
-} from '@holistic/ui';
+} from '@holisdk/ui';
 
 // The central configuration editor: every service that dropped a manifest into
 // /etc/holistic/config.d gets one section here, and nothing else in holistic asks an admin to

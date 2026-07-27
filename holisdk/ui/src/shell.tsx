@@ -5,7 +5,7 @@ import { IconButton } from './controls';
 import { DropdownMenu, type MenuItem } from './overlay/menu';
 import { GlobeIcon, KeyIcon, MoonIcon, SignOutIcon, SunIcon, UserIcon } from './icons';
 import { LOCALES, useLocale, useT } from './i18n';
-import type { HolisticUser } from './plugin/contract';
+import type { SessionUser } from './plugin/contract';
 
 // --- theme ---------------------------------------------------------------
 
@@ -14,7 +14,7 @@ type Theme = 'light' | 'dark';
 function applyTheme(t: Theme) {
   document.documentElement.setAttribute('data-theme', t);
   try {
-    localStorage.setItem('holistic-theme', t);
+    localStorage.setItem('holisdk-theme', t);
   } catch {
     /* ignore */
   }
@@ -23,7 +23,7 @@ function applyTheme(t: Theme) {
 export function useTheme(): [Theme, () => void] {
   const [theme, setTheme] = useState<Theme>(() => {
     try {
-      const saved = localStorage.getItem('holistic-theme');
+      const saved = localStorage.getItem('holisdk-theme');
       if (saved === 'light' || saved === 'dark') return saved;
     } catch {
       /* ignore */
@@ -100,7 +100,7 @@ export function Sidebar({ items, activeId, onSelect, header, footer }: SidebarPr
 export interface TopBarProps {
   title?: ReactNode;
   actions?: ReactNode;
-  user: HolisticUser;
+  user: SessionUser;
   onSignOut: () => void;
   onEditProfile?: () => void;
   onChangePassword?: () => void;

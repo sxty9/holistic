@@ -28,7 +28,7 @@ import {
   type FolderAction,
   type ServiceContextProps,
   type TextPayload,
-} from '@holistic/ui';
+} from '@holisdk/ui';
 import { ConnectPanel } from './ConnectPanel';
 
 interface Clipboard {

@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { AuthCard, AuthScene, Button, Field, HolisticMark, InlineLink, Input, PasswordInput, Stack, Text, useT, type HolisticUser } from '@holistic/ui';
+import { AuthCard, AuthScene, Button, Field, InlineLink, Input, PasswordInput, Stack, Text, useT, type SessionUser } from '@holisdk/ui';
 import { ApiError, authApi } from '../api/holisticClient';
+import { HolisticMark } from '../brand';
 
 const USERNAME_RE = /^[a-z][a-z0-9_-]{0,31}$/;
 
-export function RegisterScreen({ onSuccess, onLogin }: { onSuccess: (u: HolisticUser) => void; onLogin: () => void }) {
+export function RegisterScreen({ onSuccess, onLogin }: { onSuccess: (u: SessionUser) => void; onLogin: () => void }) {
   const t = useT();
   const [invite, setInvite] = useState('');
   const [username, setUsername] = useState('');

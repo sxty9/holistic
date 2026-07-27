@@ -1,4 +1,4 @@
-import { SettingsIcon, type HolisticUser, type ServicePlugin } from '@holistic/ui';
+import { SettingsIcon, type SessionUser, type ServicePlugin } from '@holisdk/ui';
 import { Config } from './Config';
 import './i18n';
 
@@ -11,7 +11,7 @@ const plugin: ServicePlugin = {
   displayName: 'Configuration',
   icon: SettingsIcon,
   order: 90,
-  visible: (user: HolisticUser) => user.isAdmin,
+  visible: (user: SessionUser) => user.isAdmin,
   Component: Config,
 };
 

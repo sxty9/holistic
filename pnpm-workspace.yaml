@@ -1,0 +1,8 @@
+# Workspace root = repo root, so the project-neutral SDK (holisdk/*) sits OUTSIDE the
+# Holistic dashboard (frontend/app) as a top-level sibling — extractable into its own repo
+# later — while still being consumed in-workspace via `workspace:*`.
+packages:
+  - holisdk/*
+  - frontend/app
+allowBuilds:
+  esbuild: true

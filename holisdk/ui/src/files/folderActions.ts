@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import type { FileEntry, HolisticUser, ServiceApiClient, ServiceUiBridge } from '../plugin/contract';
+import type { FileEntry, SessionUser, ServiceApiClient, ServiceUiBridge } from '../plugin/contract';
 
 /** Context handed to a folder action's panel when the user opens it from the Files toolbar.
  *  The action runs INSIDE the Files app, so `api` is the Files service's own client (read the
@@ -17,7 +17,7 @@ export interface FolderActionContext {
   /** A client for any sibling service, to call the contributing service's backend. */
   apiFor: (serviceId: string) => ServiceApiClient;
   ui: ServiceUiBridge;
-  user: HolisticUser;
+  user: SessionUser;
   /** Switch the dashboard to another service's tab (cross-service handoff — e.g. "continue
    *  this answer in the aigentic chat"). Pass bulky payloads out-of-band, not in subPath. */
   openService: (serviceId: string, subPath?: string) => void;
@@ -37,7 +37,7 @@ export interface FolderAction {
   /** Toolbar button icon. */
   icon?: ComponentType<{ className?: string }>;
   /** Visibility gate (e.g. only users holding the service's run right); omitted → always. */
-  visible?: (user: HolisticUser) => boolean;
+  visible?: (user: SessionUser) => boolean;
   /** The panel rendered when the action is opened; owns its own UX + network calls. */
   Panel: ComponentType<FolderActionContext>;
 }

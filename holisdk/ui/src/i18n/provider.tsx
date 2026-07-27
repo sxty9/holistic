@@ -5,7 +5,7 @@ import { hasMessage, translate, type MessageVars } from './engine';
 // The chosen language lives in localStorage, exactly like the theme — per device,
 // no backend, default en-US. The provider keeps every useT()/useLocale() consumer
 // in sync and mirrors the choice onto <html lang> for the platform & a11y.
-const STORAGE_KEY = 'holistic-locale';
+const STORAGE_KEY = 'holisdk-locale';
 
 function readStored(): Locale {
   try {

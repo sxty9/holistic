@@ -1,4 +1,4 @@
-import type { HolisticUser, InstanceInfo, ServiceApiClient } from '@holistic/ui';
+import type { SessionUser, InstanceInfo, ServiceApiClient } from '@holisdk/ui';
 
 export class ApiError extends Error {
   constructor(
@@ -68,23 +68,23 @@ async function request<T>(path: string, opts: RequestOpts = {}, retry = true): P
 }
 
 export const authApi = {
-  me: () => request<HolisticUser>('/api/auth/me'),
-  login: (username: string, password: string) => request<HolisticUser>('/api/auth/login', { method: 'POST', body: { username, password } }),
+  me: () => request<SessionUser>('/api/auth/me'),
+  login: (username: string, password: string) => request<SessionUser>('/api/auth/login', { method: 'POST', body: { username, password } }),
   register: (data: { username: string; password: string; display_name: string; invite_code: string }) =>
-    request<HolisticUser>('/api/auth/register', { method: 'POST', body: data }),
+    request<SessionUser>('/api/auth/register', { method: 'POST', body: data }),
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
-  refresh: () => request<HolisticUser>('/api/auth/refresh', { method: 'POST' }),
+  refresh: () => request<SessionUser>('/api/auth/refresh', { method: 'POST' }),
   changePassword: (current_password: string, new_password: string) =>
     request<void>('/api/account/password', { method: 'POST', body: { current_password, new_password } }),
-  getProfile: () => request<HolisticUser & { nickname: string }>('/api/account/profile'),
+  getProfile: () => request<SessionUser & { nickname: string }>('/api/account/profile'),
   updateProfile: (data: { firstName: string; lastName: string; nickname: string }) =>
-    request<HolisticUser>('/api/account/profile', { method: 'PUT', body: data }),
+    request<SessionUser>('/api/account/profile', { method: 'PUT', body: data }),
   uploadAvatar: (file: File) => {
     const form = new FormData();
     form.append('file', file);
-    return request<HolisticUser>('/api/account/avatar', { method: 'POST', body: form });
+    return request<SessionUser>('/api/account/avatar', { method: 'POST', body: form });
   },
-  deleteAvatar: () => request<HolisticUser>('/api/account/avatar', { method: 'DELETE' }),
+  deleteAvatar: () => request<SessionUser>('/api/account/avatar', { method: 'DELETE' }),
 };
 
 /** Runtime domain this instance is served on — the single source of truth for the shell
