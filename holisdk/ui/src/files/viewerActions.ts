@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import type { FileEntry, SessionUser, ServiceApiClient, ServiceUiBridge } from '../plugin/contract';
 import type { TextPayload } from './viewers';
+import { createActionRegistry } from './actionRegistry';
 
 /** Bridges + content accessors a FilePreview host hands down so registered viewer actions can run
  *  against the CURRENTLY shown file. Content is host-specific: the Files app reads it from its
@@ -55,16 +56,14 @@ export interface FileViewerAction {
   Panel: ComponentType<FileViewerActionContext>;
 }
 
-const registry: FileViewerAction[] = [];
+const registry = createActionRegistry<FileViewerAction>();
 
 /** Register a viewer action. Idempotent by id (safe across hot reloads / repeated imports). */
 export function registerViewerAction(action: FileViewerAction): void {
-  const i = registry.findIndex((a) => a.id === action.id);
-  if (i >= 0) registry[i] = action;
-  else registry.push(action);
+  registry.register(action);
 }
 
 /** All registered viewer actions, in registration order. FilePreview filters by visibility + type. */
 export function viewerActions(): readonly FileViewerAction[] {
-  return registry;
+  return registry.all();
 }

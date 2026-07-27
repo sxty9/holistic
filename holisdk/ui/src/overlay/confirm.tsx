@@ -1,6 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { Modal } from './modal';
 import { Button } from '../controls';
+import { createStore } from '../lib/store';
 
 export interface ConfirmOptions {
   title: string;
@@ -14,40 +15,24 @@ interface PendingConfirm {
   resolve: (v: boolean) => void;
 }
 
-let queue: PendingConfirm[] = [];
-const listeners = new Set<() => void>();
+const store = createStore<PendingConfirm[]>([]);
 let nextId = 1;
-
-function notify() {
-  listeners.forEach((l) => l());
-}
-function subscribe(l: () => void) {
-  listeners.add(l);
-  return () => {
-    listeners.delete(l);
-  };
-}
-function snapshot() {
-  return queue;
-}
 
 /** Imperative confirm — resolves true/false. Backed by <ConfirmRoot/> mounted in the shell. */
 export function confirm(opts: ConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
-    queue = [...queue, { id: nextId++, opts, resolve }];
-    notify();
+    store.set((queue) => [...queue, { id: nextId++, opts, resolve }]);
   });
 }
 
 function settle(id: number, value: boolean) {
-  const item = queue.find((q) => q.id === id);
-  queue = queue.filter((q) => q.id !== id);
-  notify();
+  const item = store.snapshot().find((q) => q.id === id);
+  store.set((queue) => queue.filter((q) => q.id !== id));
   item?.resolve(value);
 }
 
 export function ConfirmRoot() {
-  const q = useSyncExternalStore(subscribe, snapshot, snapshot);
+  const q = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
   const cur = q[0];
   return (
     <Modal

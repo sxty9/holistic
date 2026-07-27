@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import grp
-
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from ..accounts import invites, provision
-from ..accounts.users import get_user_info
+from ..accounts import invites, provision, users
 from ..auth.deps import csrf_guard, require_admin
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -13,17 +10,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(re
 
 @router.get("/users")
 def list_users():
-    try:
-        members = set(grp.getgrnam("smbusers").gr_mem)
-    except KeyError:
-        members = set()
-    out = []
-    for name in sorted(members):
-        try:
-            out.append(get_user_info(name))
-        except KeyError:
-            continue
-    return out
+    return users.list_users()
 
 
 @router.delete("/users/{username}", status_code=204, dependencies=[Depends(csrf_guard)])

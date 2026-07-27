@@ -1,4 +1,4 @@
-import { GaugeIcon, type HolisticUser, type ServicePlugin } from '@holistic/ui';
+import { GaugeIcon, type SessionUser, type ServicePlugin } from '@holisdk/ui';
 import { Usage } from './Usage';
 import './i18n';
 
@@ -11,7 +11,7 @@ const plugin: ServicePlugin = {
   displayName: 'Consumption',
   icon: GaugeIcon,
   order: 91,
-  visible: (user: HolisticUser) => user.isAdmin,
+  visible: (user: SessionUser) => user.isAdmin,
   Component: Usage,
 };
 

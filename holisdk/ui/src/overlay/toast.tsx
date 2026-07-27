@@ -1,5 +1,6 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
+import { createStore } from '../lib/store';
 import { AlertIcon, CheckIcon, InfoIcon, XIcon } from '../icons';
 import { useT } from '../i18n';
 
@@ -15,40 +16,23 @@ export interface ToastItem {
 
 // Module-level store so the shell can hand services a plain `toast()` function
 // (no React context to thread through the ServiceContextProps bridge).
-let items: ToastItem[] = [];
-const listeners = new Set<() => void>();
+const store = createStore<ToastItem[]>([]);
 let nextId = 1;
-
-function notify() {
-  listeners.forEach((l) => l());
-}
-function subscribe(l: () => void) {
-  listeners.add(l);
-  return () => {
-    listeners.delete(l);
-  };
-}
-function snapshot() {
-  return items;
-}
 
 export function toast(opts: { title: string; description?: ReactNode; variant?: ToastVariant }): number {
   const id = nextId++;
-  items = [...items, { id, title: opts.title, description: opts.description, variant: opts.variant ?? 'info' }];
-  notify();
+  store.set((items) => [...items, { id, title: opts.title, description: opts.description, variant: opts.variant ?? 'info' }]);
   setTimeout(() => dismissToast(id), 4500);
   return id;
 }
 
 // Trigger the exit animation; the card calls removeToast on animationend.
 export function dismissToast(id: number) {
-  items = items.map((i) => (i.id === id ? { ...i, leaving: true } : i));
-  notify();
+  store.set((items) => items.map((i) => (i.id === id ? { ...i, leaving: true } : i)));
 }
 
 function removeToast(id: number) {
-  items = items.filter((i) => i.id !== id);
-  notify();
+  store.set((items) => items.filter((i) => i.id !== id));
 }
 
 const ICON: Record<ToastVariant, ReactNode> = { info: <InfoIcon />, success: <CheckIcon />, error: <AlertIcon /> };
@@ -56,7 +40,7 @@ const COLOR: Record<ToastVariant, string> = { info: 'text-accent', success: 'tex
 
 export function Toaster() {
   const tr = useT();
-  const list = useSyncExternalStore(subscribe, snapshot, snapshot);
+  const list = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
   return (
     <div className="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 w-[min(22rem,90vw)]">
       {list.map((t) => (

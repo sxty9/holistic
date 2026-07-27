@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import type { FileEntry, SessionUser, ServiceApiClient, ServiceUiBridge } from '../plugin/contract';
+import { createActionRegistry } from './actionRegistry';
 
 /** Context handed to a folder action's panel when the user opens it from the Files toolbar.
  *  The action runs INSIDE the Files app, so `api` is the Files service's own client (read the
@@ -42,16 +43,14 @@ export interface FolderAction {
   Panel: ComponentType<FolderActionContext>;
 }
 
-const registry: FolderAction[] = [];
+const registry = createActionRegistry<FolderAction>();
 
 /** Register a folder action. Idempotent by id (safe across hot reloads / repeated imports). */
 export function registerFolderAction(action: FolderAction): void {
-  const i = registry.findIndex((a) => a.id === action.id);
-  if (i >= 0) registry[i] = action;
-  else registry.push(action);
+  registry.register(action);
 }
 
 /** All registered folder actions, in registration order. The Files app filters by visibility. */
 export function folderActions(): readonly FolderAction[] {
-  return registry;
+  return registry.all();
 }

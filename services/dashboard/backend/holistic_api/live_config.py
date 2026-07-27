@@ -14,10 +14,10 @@ the backend uses.
 """
 from __future__ import annotations
 
-import json
 import os
 import threading
 
+from . import config_pool
 from .config import settings
 
 _SERVICE = "dashboard"
@@ -26,20 +26,17 @@ _cache: dict[str, object] = {"mtime": None, "values": {}}
 
 
 def _values() -> dict:
-    """The dashboard's saved config values, reloaded only when the file's mtime changes."""
-    path = os.path.join(settings.config_values_dir, f"{_SERVICE}.json")
+    """The dashboard's saved config values, reloaded only when the file's mtime changes. The read
+    goes through the shared config-pool accessor (the single data path to the values file); the
+    mtime cache here just keeps the hot request path off the disk between admin changes."""
+    path = config_pool.values_path(_SERVICE)
     try:
         mtime = os.stat(path).st_mtime
     except OSError:
         return {}  # no central values yet → callers use their env/baked default
     with _lock:
         if _cache["mtime"] != mtime:
-            try:
-                with open(path) as fh:
-                    data = json.load(fh)
-                _cache["values"] = data if isinstance(data, dict) else {}
-            except (OSError, json.JSONDecodeError):
-                _cache["values"] = {}
+            _cache["values"] = config_pool.read_values(_SERVICE)
             _cache["mtime"] = mtime
         return _cache["values"]  # type: ignore[return-value]
 
