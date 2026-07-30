@@ -1,6 +1,6 @@
 // App-level messages: the auth screens and the dashboard shell's own copy.
-// Registered on import (see main.tsx) on top of @holistic/ui's core bundle.
-import { registerMessages } from '@holistic/ui';
+// Registered on import (see main.tsx) on top of @holisdk/ui's core bundle.
+import { registerMessages } from '@holisdk/ui';
 
 registerMessages({
   'en-US': {

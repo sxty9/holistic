@@ -5,7 +5,7 @@
 // metric labels come from its usage.d manifest; a service may localize them by registering
 // `usage.metric.<service>.<id>` in its own bundle — otherwise the manifest text shows verbatim
 // (the same fallback rule the Rights and Configuration catalogs use).
-import { registerMessages } from '@holistic/ui';
+import { registerMessages } from '@holisdk/ui';
 
 registerMessages({
   'en-US': {

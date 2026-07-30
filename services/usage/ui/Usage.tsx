@@ -16,7 +16,7 @@ import {
   useLocale,
   useT,
   type ServiceContextProps,
-} from '@holistic/ui';
+} from '@holisdk/ui';
 import type { ComponentType } from 'react';
 
 // The central Consumption view: it unifies the three consumption interfaces the axioms name —

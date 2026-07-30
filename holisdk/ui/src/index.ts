@@ -1,0 +1,137 @@
+// Plugin contract + helpers
+export * from './plugin/contract';
+export { cn } from './lib/cn';
+
+// i18n (locales, provider, hooks, message registry)
+export * from './i18n';
+
+// Icons
+export * from './icons';
+
+// Primitives
+export {
+  Stack,
+  Box,
+  Grid,
+  Panel,
+  Text,
+  Heading,
+  Divider,
+  Spinner,
+  Badge,
+  ProgressBar,
+  ScrollArea,
+  Avatar,
+  EmptyState,
+} from './primitives';
+export type { StackProps, BoxProps, GridProps, PanelProps, TextProps, HeadingProps, EmptyStateProps } from './primitives';
+
+// Controls
+export {
+  Button,
+  IconButton,
+  Input,
+  PasswordInput,
+  Textarea,
+  Field,
+  SegmentedControl,
+  SearchField,
+  Checkbox,
+  Switch,
+  InlineLink,
+} from './controls';
+export type { ButtonProps, IconButtonProps, InputProps, TextareaProps, FieldProps, SegmentedOption } from './controls';
+
+// Overlays
+export { Modal, Sheet } from './overlay/modal';
+export type { ModalProps, SheetProps } from './overlay/modal';
+export { DropdownMenu, ContextMenu } from './overlay/menu';
+export type { MenuItem } from './overlay/menu';
+export { toast, dismissToast, Toaster } from './overlay/toast';
+export type { ToastVariant, ToastItem } from './overlay/toast';
+export { confirm, ConfirmRoot } from './overlay/confirm';
+export type { ConfirmOptions } from './overlay/confirm';
+export { Tooltip } from './overlay/tooltip';
+export type { TooltipProps } from './overlay/tooltip';
+export { HoverPanel } from './overlay/hovercard';
+export type { HoverPanelProps } from './overlay/hovercard';
+export { Marquee } from './marquee';
+export type { MarqueeProps } from './marquee';
+
+export { Autocomplete } from './autocomplete';
+export type { AutocompleteProps, AutocompleteOption } from './autocomplete';
+
+// Structured multiple-choice question: renders an assistant's interactive-turn question(s) as
+// clickable option cards in a chat bubble (à la Claude Code). Fed by the host application.
+export { AskChoice } from './askchoice';
+export type { AskChoiceProps, AskOption, AskQuestion } from './askchoice';
+
+// Global notification centre (top-bar bell): live, cross-source notifications. Backed by an
+// injected API client, so the host wires it to whichever service supplies notifications.
+export { NotificationCenter } from './notificationcenter';
+export type { NotificationCenterProps, NotificationItem } from './notificationcenter';
+
+// Contact/recipient picker: avatar-aware multi-select type-ahead (e.g. To/Cc/Bcc, attendees),
+// backed by an injected directory API client the host provides.
+export { ContactPicker } from './contactpicker';
+export type { ContactPickerProps, ContactOption } from './contactpicker';
+
+// Shell
+export { AppShell, Sidebar, TopBar, ContentRegion, useTheme } from './shell';
+export type { AppShellProps, SidebarProps, SidebarServiceItem, TopBarProps, ContentRegionProps } from './shell';
+
+// Auth (neutral scaffolding — AuthCard takes a `logo`; the host supplies its own brand mark)
+export { AuthScene, AuthCard } from './auth';
+
+// Code
+export { CodeBlock } from './code';
+
+// Terminal (interactive shell over a WebSocket; owns the xterm.js dependency)
+export { Terminal } from './terminal';
+export type { TerminalProps } from './terminal';
+
+// Metrics & data visualization
+export { LineChart, Sparkline, Legend, StreamGraph } from './charts';
+export type { ChartSeries, LineChartProps, SparklineProps, LegendItem, LegendProps, StreamSeries, StreamGraphProps, RefLine } from './charts';
+export { Gauge, Donut, toneForLoad } from './gauge';
+export type { Tone, GaugeProps, DonutProps, DonutSegment } from './gauge';
+export { Stat } from './stat';
+export type { StatProps, StatDelta } from './stat';
+export { DataTable } from './table';
+export type { Column, DataTableProps, SortDir } from './table';
+
+// Formatting & data hooks
+export { formatPercent, formatRate, formatDuration, formatRelativeTime } from './lib/format';
+export { useLiveQuery } from './lib/useLiveQuery';
+export type { LiveQuery } from './lib/useLiveQuery';
+
+// Safe email HTML viewer (sandboxed iframe; the only sanctioned way to render untrusted HTML)
+export { SafeHtmlEmail } from './safehtml';
+export type { SafeHtmlEmailProps } from './safehtml';
+
+// Rich-text editor (dependency-free WYSIWYG; emits sanitised HTML + plain text)
+export { RichTextEditor } from './richtext';
+export type { RichTextEditorProps } from './richtext';
+
+// Markdown + math renderer (escaped React nodes; KaTeX for LaTeX math)
+export { Markdown } from './markdown';
+export type { MarkdownProps } from './markdown';
+
+// Drag-and-drop nestable navigation tree (reorder + nest by dragging)
+export { TreeNav } from './treenav';
+export type { TreeNavProps, TreeNavNode, TreeNavPosition } from './treenav';
+
+// Files (cloud-style file manager)
+export { FileEntryIcon, FileThumb, Breadcrumb, UploadControl } from './files/parts';
+export type { BreadcrumbSegment, FileThumbSources } from './files/parts';
+export { FileBrowser, formatBytes, formatDate } from './files/FileBrowser';
+export type { FileBrowserProps, FileActionId } from './files/FileBrowser';
+export { FileToolbar } from './files/FileToolbar';
+export type { FileToolbarProps } from './files/FileToolbar';
+export { registerFolderAction, folderActions } from './files/folderActions';
+export type { FolderAction, FolderActionContext } from './files/folderActions';
+export { registerViewerAction, viewerActions } from './files/viewerActions';
+export type { FileViewerAction, FileViewerActionContext, FileViewerActionHost } from './files/viewerActions';
+export { NewFolderDialog, RenameDialog, MoveDialog } from './files/dialogs';
+export { FilePreview } from './files/viewers';
+export type { FilePreviewProps, TextPayload } from './files/viewers';

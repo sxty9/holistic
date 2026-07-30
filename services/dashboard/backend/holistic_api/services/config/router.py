@@ -31,6 +31,8 @@ from pydantic import BaseModel
 
 from ...auth.deps import csrf_guard, require_admin
 from ...config import settings
+from ... import config_pool
+from ..dropins import SERVICE_RE, read_manifest_dir
 
 # Configuration is an ADMIN surface by definition (the law: "insbesondere durch Admins"), so the
 # whole router is gated — exactly like routers/admin.py — and the mutating route adds CSRF.
@@ -38,12 +40,12 @@ router = APIRouter(prefix="/api/services/config", tags=["config"], dependencies=
 
 # Same rules the validator (lib/holistic-config.py) enforces at install time. Re-checked here
 # because /etc/holistic/config.d is a drop-in dir: a manifest may land without ever having been
-# validated, and a malformed one must be skipped, never served or written against.
-SERVICE_RE = re.compile(r"^[a-z][a-z0-9]{2,19}$")
+# validated, and a malformed one must be skipped, never served or written against. SERVICE_RE is
+# the shared id grammar (dropins); the setting-level rules below are config-specific.
 SETTING_RE = re.compile(r"^[a-z][a-zA-Z0-9_]*$")
 TYPES = ("string", "int", "bool", "enum", "secret")
 
-# Serializes the values pool's read-modify-write. put_values does read (_saved) → merge →
+# Serializes the values pool's read-modify-write. put_values does read (config_pool.read_values) → merge →
 # write (_write); the backend runs its sync endpoints in a threadpool, so two concurrent admin
 # edits to the same service would otherwise interleave and lose one another's changes (a lost
 # update) — the same reason profiles.py/sessions.py/instance.py guard their stores. The dashboard
@@ -115,22 +117,7 @@ def _norm(manifest: Any, stem: str) -> dict | None:
 
 
 def _manifests() -> list[dict]:
-    d = settings.config_manifests_dir
-    try:
-        names = sorted(n for n in os.listdir(d) if n.endswith(".json"))
-    except OSError:
-        return []  # no drop-in dir yet → no service declares configuration
-    out = []
-    for name in names:
-        try:
-            with open(os.path.join(d, name)) as fh:
-                data = json.load(fh)
-        except (OSError, json.JSONDecodeError):
-            continue
-        m = _norm(data, name[:-5])
-        if m:
-            out.append(m)
-    return sorted(out, key=lambda m: m["service"])
+    return read_manifest_dir(settings.config_manifests_dir, _norm)
 
 
 def _manifest(service: str) -> dict:
@@ -144,25 +131,12 @@ def _decls(manifest: dict) -> dict[str, dict]:
     return {s["id"]: s for c in manifest["categories"] for s in c["settings"]}
 
 
-def _values_path(service: str) -> str:
-    return os.path.join(settings.config_values_dir, f"{service}.json")
-
-
-def _saved(service: str) -> dict[str, Any]:
-    try:
-        with open(_values_path(service)) as fh:
-            data = json.load(fh)
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
 def _effective(manifest: dict) -> dict[str, Any]:
     """Declared defaults overlaid with the saved values — what the daemon actually sees.
     Anything saved but no longer declared is dropped, so a removed setting cannot linger."""
     decls = _decls(manifest)
     values = {sid: d["default"] for sid, d in decls.items()}
-    for sid, v in _saved(manifest["service"]).items():
+    for sid, v in config_pool.read_values(manifest["service"]).items():
         if sid in decls:
             values[sid] = v
     return values
@@ -204,7 +178,7 @@ def _write(service: str, values: dict[str, Any]) -> None:
             os.chmod(tmp, 0o640)
             with contextlib.suppress(KeyError, OSError):
                 os.chown(tmp, -1, grp.getgrnam(settings.config_group).gr_gid)
-            os.replace(tmp, _values_path(service))  # atomic: readers see the old or the new file, never a torn one
+            os.replace(tmp, config_pool.values_path(service))  # atomic: readers see the old or the new file, never a torn one
         except OSError:
             with contextlib.suppress(OSError):
                 os.unlink(tmp)
@@ -237,13 +211,13 @@ def get_values(service: str):
 def put_values(service: str, body: ValuesBody):
     m = _manifest(service)
     decls = _decls(m)
-    # Atomic read-modify-write: hold `_lock` across the read (_saved), the merge and the write
+    # Atomic read-modify-write: hold `_lock` across the read (config_pool.read_values), the merge and the write
     # so two concurrent edits to the same service cannot interleave and lose one another. The
     # response's _effective read stays inside the lock too, so it reflects exactly what we wrote
     # (no other writer slips in between). Validation raises before _write, leaving the pool
     # untouched — the released lock never guards a half-applied change.
     with _lock:
-        merged = {sid: v for sid, v in _saved(service).items() if sid in decls}
+        merged = {sid: v for sid, v in config_pool.read_values(service).items() if sid in decls}
         for sid, value in body.settings.items():
             decl = decls.get(sid)
             if decl is None:

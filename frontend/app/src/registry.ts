@@ -1,4 +1,4 @@
-import type { ServicePlugin } from '@holistic/ui';
+import type { ServicePlugin } from '@holisdk/ui';
 
 // Build-time discovery. Two sources, both default-exporting a ServicePlugin:
 //   • in-repo services:      services/<name>/ui/index.tsx
