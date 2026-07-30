@@ -4,6 +4,7 @@ import { Grid, Spinner, EmptyState } from '../primitives';
 import { ContextMenu, type MenuItem } from '../overlay/menu';
 import { CopyIcon, DownloadIcon, FolderIcon, InfoIcon, MoveIcon, PencilIcon, TrashIcon } from '../icons';
 import { useT } from '../i18n';
+import { formatBytes, formatDate } from '../lib/format';
 import type { FileEntry } from '../plugin/contract';
 import { FileThumb, type FileThumbSources } from './parts';
 
@@ -23,17 +24,6 @@ export interface FileBrowserProps {
   onSelectionChange: (selection: Set<string>) => void;
   onAction: (action: FileActionId, entries: FileEntry[]) => void;
   emptyAction?: ReactNode;
-}
-
-export function formatBytes(n: number): string {
-  if (n <= 0) return '—';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
-  return `${(n / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-}
-export function formatDate(ms: number): string {
-  if (!ms) return '';
-  return new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 const COL_MIN = 72;

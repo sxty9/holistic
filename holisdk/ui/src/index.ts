@@ -100,8 +100,8 @@ export type { StatProps, StatDelta } from './stat';
 export { DataTable } from './table';
 export type { Column, DataTableProps, SortDir } from './table';
 
-// Formatting & data hooks
-export { formatPercent, formatRate, formatDuration, formatRelativeTime } from './lib/format';
+// Formatting & data hooks — the single formatting access point (bytes, rates, %, durations, dates)
+export { formatBytes, formatDate, formatPercent, formatRate, formatDuration, formatRelativeTime } from './lib/format';
 export { useLiveQuery } from './lib/useLiveQuery';
 export type { LiveQuery } from './lib/useLiveQuery';
 
@@ -124,7 +124,7 @@ export type { TreeNavProps, TreeNavNode, TreeNavPosition } from './treenav';
 // Files (cloud-style file manager)
 export { FileEntryIcon, FileThumb, Breadcrumb, UploadControl } from './files/parts';
 export type { BreadcrumbSegment, FileThumbSources } from './files/parts';
-export { FileBrowser, formatBytes, formatDate } from './files/FileBrowser';
+export { FileBrowser } from './files/FileBrowser';
 export type { FileBrowserProps, FileActionId } from './files/FileBrowser';
 export { FileToolbar } from './files/FileToolbar';
 export type { FileToolbarProps } from './files/FileToolbar';

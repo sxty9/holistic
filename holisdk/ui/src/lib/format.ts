@@ -1,21 +1,34 @@
-/** Formatting helpers for metric displays. Complements formatBytes/formatDate
- *  (exported from ../files/FileBrowser) with percent, throughput, and durations. */
+/** The single access point for value formatting in the SDK: bytes, rates, percentages,
+ *  durations and dates. UI that shows a formatted number reuses these rather than hand-rolling
+ *  a local variant. Pure Intl/Date/Math (no DOM), so the shared core stays platform-neutral. */
+
+const BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB'] as const;
+
+/** Scale a positive byte quantity to its largest fitting 1024-unit and render it, appending
+ *  `suffix` to the unit ("" → "1.5 KB", "/s" → "1.5 KB/s"). The one place that owns byte
+ *  scaling — formatBytes and formatRate both build on it. Callers guard the non-positive domain. */
+function humanizeBytes(n: number, suffix: string): string {
+  // Clamp the unit index to [0, last]: a sub-1 value would otherwise give index -1 → undefined unit.
+  const i = Math.max(0, Math.min(BYTE_UNITS.length - 1, Math.floor(Math.log(n) / Math.log(1024))));
+  return `${(n / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${BYTE_UNITS[i]}${suffix}`;
+}
+
+/** Humanize a byte count, e.g. 1536 → "1.5 KB". Non-positive/non-finite → "—". */
+export function formatBytes(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return '—';
+  return humanizeBytes(n, '');
+}
+
+/** Humanize a bytes-per-second throughput, e.g. 1536000 → "1.5 MB/s". */
+export function formatRate(bytesPerSec: number): string {
+  if (!Number.isFinite(bytesPerSec) || bytesPerSec <= 0) return '0 B/s';
+  return humanizeBytes(bytesPerSec, '/s');
+}
 
 /** "42%" / "42.5%" — value is already 0..100. */
 export function formatPercent(value: number, digits = 0): string {
   if (!Number.isFinite(value)) return '–';
   return `${value.toFixed(digits)}%`;
-}
-
-const RATE_UNITS = ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'] as const;
-
-/** Humanize a bytes-per-second throughput, e.g. 1536000 → "1.5 MB/s". */
-export function formatRate(bytesPerSec: number): string {
-  if (!Number.isFinite(bytesPerSec) || bytesPerSec <= 0) return '0 B/s';
-  // Clamp the unit index to [0, last]: sub-1 B/s would otherwise give index -1 → undefined unit.
-  const i = Math.max(0, Math.min(RATE_UNITS.length - 1, Math.floor(Math.log(bytesPerSec) / Math.log(1024))));
-  const n = bytesPerSec / 1024 ** i;
-  return `${n.toFixed(i === 0 ? 0 : 1)} ${RATE_UNITS[i]}`;
 }
 
 /** Humanize a duration in seconds into the two most significant units,
@@ -33,6 +46,13 @@ export function formatDuration(seconds: number): string {
   else if (m) parts.push(`${m}m`, `${sec}s`);
   else parts.push(`${sec}s`);
   return parts.slice(0, 2).join(' ');
+}
+
+/** A short absolute date for a millisecond timestamp, e.g. "Jul 27, 2026" — for file mtimes and
+ *  the like. Empty/zero input → "". For a relative "time ago" label, use formatRelativeTime. */
+export function formatDate(ms: number): string {
+  if (!ms) return '';
+  return new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 /** A locale-aware "time ago" label for an ISO timestamp — "5 min ago", "3 days ago",

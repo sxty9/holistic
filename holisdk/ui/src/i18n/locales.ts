@@ -1,4 +1,4 @@
-// The holistic-wide set of UI languages. English (US) is the canonical source
+// The set of UI languages holisdk ships. English (US) is the canonical source
 // language and the default for everyone who hasn't chosen otherwise; German and
 // Japanese are full translations. Adding a language = add an entry here plus the
 // matching column in every registered message bundle.

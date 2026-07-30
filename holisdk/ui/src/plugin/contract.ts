@@ -117,19 +117,19 @@ export interface FileActionContext {
 }
 
 /* ────────────────────────────── Rights standard ──────────────────────────────
- * The holistic-wide way a service declares which fine-grained rights it offers
+ * The host-wide way a service declares which fine-grained rights it offers
  * for NON-admin users. Each right is backed 1:1 by a Linux group; granting a
  * right = adding the user to that group. Admins (sudo) implicitly have every
  * right and are never listed here. A service drops its manifest at install time
- * to /etc/holistic/permissions.d/<service>.json; the `privleg` service
+ * to the host's permissions directory; the host's rights-management service
  * aggregates all manifests to render the rights editor.
  *
  * Enforcement everywhere is uniform:
  *     userHasRight(user, perm) = user.isAdmin || perm.group ∈ user.groups
  * `default` only controls INITIAL group membership (see PermissionDecl.default), so a
- * host WITHOUT privleg behaves exactly as before: default:false rights are admin-only
- * (empty group) and default:true rights stay granted to everyone (provisioning grants
- * them). privleg later grants default:false rights and revokes default:true ones.
+ * host WITHOUT a rights-management service behaves exactly as before: default:false rights
+ * are admin-only (empty group) and default:true rights stay granted to everyone (provisioning
+ * grants them). That service later grants default:false rights and revokes default:true ones.
  */
 
 /** A single fine-grained right a service exposes to non-admin users. */
@@ -174,8 +174,8 @@ export interface PermissionCategory {
   permissions: PermissionDecl[];
 }
 
-/** What a service declares to the holistic rights standard.
- *  Dropped to /etc/holistic/permissions.d/<service>.json at install time. */
+/** What a service declares to the host's rights standard.
+ *  Dropped to the host's permissions directory at install time. */
 export interface PermissionManifest {
   /** MUST equal the ServicePlugin id (== service directory name). */
   service: string;
