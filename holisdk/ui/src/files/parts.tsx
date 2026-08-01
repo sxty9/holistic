@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { Button } from '../controls';
 import { ChevronRightIcon, FileIcon, FilesIcon, FileTextIcon, FolderIcon, ImageIcon, MusicIcon, PdfIcon, UploadIcon, VideoIcon } from '../icons';
@@ -78,19 +78,28 @@ function TextThumb({ entry, load, fallback, className }: { entry: FileEntry; loa
   );
 }
 
-/** Fills a square/box with a rendered preview of the file — a real image/video thumbnail or a
- *  text/markdown page — falling back to {@link FileEntryIcon} for folders, other types, and on
- *  load error. `withText` gates the (fetch-backed) text preview to roomy layouts like the grid. */
+/** Renders a preview of the file — a real image/video thumbnail or a text/markdown page —
+ *  falling back to {@link FileEntryIcon} for folders, other types, and on load error. `withText`
+ *  gates the (fetch-backed) text preview to roomy layouts like the grid.
+ *
+ *  `fit` chooses how media sits in its box, the same distinction the full-screen viewer draws:
+ *  `'cover'` (default) fills the box and crops the overflow — right for a MINIATURE tile in a grid;
+ *  `'contain'` shows the whole media in its own aspect ratio, letterboxed — right for a PREVIEW that
+ *  must show WHAT the file is, not a cropped detail of it. A contain box needs a definite height
+ *  (e.g. `h-64`) via `className`, since the media is bounded by it rather than filling it. */
 export function FileThumb({
   entry,
   sources,
   withText,
+  fit = 'cover',
   iconClassName,
   className,
 }: {
   entry: FileEntry;
   sources?: FileThumbSources;
   withText?: boolean;
+  /** How media sits in its box: `'cover'` fills and crops (tile), `'contain'` shows it whole (preview). */
+  fit?: 'cover' | 'contain';
   /** Size classes for the fallback icon (e.g. "h-12 w-12"). */
   iconClassName?: string;
   /** Extra classes for the fill element. */
@@ -99,16 +108,18 @@ export function FileThumb({
   const [mediaFailed, setMediaFailed] = useState(false);
   const v = entry.viewer;
   const icon = <FileEntryIcon entry={entry} className={iconClassName} />;
+  // Cover fills the box and crops; contain scales the whole media within the box, preserving aspect.
+  const mediaCls = fit === 'contain' ? 'max-h-full max-w-full object-contain' : 'h-full w-full object-cover';
 
   if (entry.kind === 'file' && !mediaFailed && sources?.mediaUrl && (v === 'image' || v === 'video')) {
     const src = sources.mediaUrl(entry);
     return (
       <div className={cn('flex h-full w-full items-center justify-center overflow-hidden rounded-md bg-fill/5', className)}>
         {v === 'image' ? (
-          <img src={src} alt="" loading="lazy" onError={() => setMediaFailed(true)} className="h-full w-full object-cover" />
+          <img src={src} alt="" loading="lazy" onError={() => setMediaFailed(true)} className={mediaCls} />
         ) : (
           // #t=0.1 nudges the browser to paint an early frame as the poster.
-          <video src={`${src}#t=0.1`} muted playsInline preload="metadata" onError={() => setMediaFailed(true)} className="h-full w-full object-cover" />
+          <video src={`${src}#t=0.1`} muted playsInline preload="metadata" onError={() => setMediaFailed(true)} className={mediaCls} />
         )}
       </div>
     );
@@ -146,6 +157,38 @@ export function Breadcrumb({ segments, onNavigate }: { segments: BreadcrumbSegme
     </nav>
   );
 }
+
+/** Imperative handle for {@link FileInput}: open the OS file picker on demand. */
+export interface FileInputHandle {
+  /** Open the OS file picker. */
+  open: () => void;
+}
+
+/** A headless file picker: one hidden `<input type="file">` a service opens imperatively through its
+ *  ref — from its own button or menu item — so a service never has to render a raw input itself (the
+ *  service-UI lint forbids raw HTML; the SDK owns it). Chosen files arrive via `onFiles`; `accept`
+ *  and `multiple` mirror the input. The input self-clears after each pick, so choosing the same file
+ *  twice in a row still fires. */
+export const FileInput = forwardRef<FileInputHandle, { onFiles: (files: File[]) => void; accept?: string; multiple?: boolean }>(
+  function FileInput({ onFiles, accept, multiple }, ref) {
+    const inputRef = useRef<HTMLInputElement>(null);
+    useImperativeHandle(ref, () => ({ open: () => inputRef.current?.click() }), []);
+    return (
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          e.currentTarget.value = '';
+          if (files.length) onFiles(files);
+        }}
+      />
+    );
+  },
+);
 
 /** A single "Upload" access point that offers either loose files or a whole folder, fronting
  *  two hidden inputs. Both selections arrive as one `File[]`; folder entries additionally carry
