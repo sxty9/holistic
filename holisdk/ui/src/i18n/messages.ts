@@ -72,6 +72,20 @@ registerMessages({
 
     // structured question / choice (shared @holisdk/ui — aigentic interactive turns)
     'ask.confirm': 'Confirm',
+
+    // conversational AI chat (shared @holisdk/ui — one chat for every service)
+    'chat.newConversation': 'New chat',
+    'chat.noConversations': 'No chats yet',
+    'chat.untitled': 'Untitled',
+    'chat.deleteConversation': 'Delete chat',
+    'chat.deleteConfirm': 'Delete this chat? This can’t be undone.',
+    'chat.emptyTitle': 'Start a conversation',
+    'chat.emptyHint': 'Ask anything to begin.',
+    'chat.placeholder': 'Message…',
+    'chat.send': 'Send',
+    'chat.model': 'Model',
+    'chat.you': 'You',
+    'chat.errorReply': 'The assistant couldn’t answer. Try again.',
   },
 
   de: {

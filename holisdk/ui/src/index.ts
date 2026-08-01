@@ -66,6 +66,23 @@ export type { AutocompleteProps, AutocompleteOption } from './autocomplete';
 export { AskChoice } from './askchoice';
 export type { AskChoiceProps, AskOption, AskQuestion } from './askchoice';
 
+// Conversational AI — the ONE chat building block for the whole landscape (many conversations,
+// engine/model choice, model-tagged answers, reload-surviving history). Each service drives it
+// with its own ChatAdapter, so there is never a second, poorer chat.
+export { Chat, EnginePicker } from './chat';
+export type {
+  ChatProps,
+  EnginePickerProps,
+  ChatAdapter,
+  ChatEngine,
+  ChatModel,
+  ChatMessage,
+  Conversation,
+  NewConversation,
+  EngineChoice,
+  SendInput,
+} from './chat';
+
 // Global notification centre (top-bar bell): live, cross-source notifications. Backed by an
 // injected API client, so the host wires it to whichever service supplies notifications.
 export { NotificationCenter } from './notificationcenter';
