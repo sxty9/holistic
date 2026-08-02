@@ -1,0 +1,10 @@
+{
+  "extends": "../../../frontend/tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@holistic/ui": ["../../../frontend/packages/ui/src/index.ts"]
+    }
+  },
+  "include": ["."]
+}

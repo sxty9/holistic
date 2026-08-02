@@ -1,0 +1,25 @@
+{
+  "service": "dashboard",
+  "version": 1,
+  "categories": [
+    {
+      "id": "uploads",
+      "label": "Uploads",
+      "description": "Size ceilings for what users may upload.",
+      "settings": [
+        { "id": "maxUploadGib", "label": "Maximum file upload (GiB)", "type": "int", "default": 20 },
+        { "id": "maxAvatarMib", "label": "Maximum profile photo (MiB)", "type": "int", "default": 5 },
+        { "id": "maxTextMib", "label": "Text preview limit (MiB)", "type": "int", "default": 2 }
+      ]
+    },
+    {
+      "id": "sessions",
+      "label": "Sessions",
+      "description": "How long a sign-in stays valid before it must be renewed.",
+      "settings": [
+        { "id": "sessionAccessMinutes", "label": "Access token lifetime (minutes)", "type": "int", "default": 15 },
+        { "id": "sessionRefreshDays", "label": "Sign-in lifetime (days)", "type": "int", "default": 7 }
+      ]
+    }
+  ]
+}

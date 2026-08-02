@@ -95,7 +95,30 @@ python3 "$HERE/lib/holistic-perms.py" ensure-groups /etc/holistic/permissions.d
 echo "[dashboard] preparing configuration drop-ins..."
 install -d -o holistic -g holistic -m 0755 /etc/holistic/config.d
 install -d -o holistic -g holistic -m 0750 /var/lib/holistic/config
+# The dashboard delegates its OWN admin-tunable settings (upload/session limits) to the central
+# Configuration tab like every other service, instead of keeping them env-only.
+install -m 0644 "$HERE/config/dashboard.json" /etc/holistic/config.d/dashboard.json
 python3 "$HERE/lib/holistic-config.py" validate /etc/holistic/config.d
+
+# Consumption standard (the third mirror of the rights standard): services DECLARE which metrics
+# they report in usage.d drop-ins; each service WRITES its current values into the passive report
+# pool /var/lib/holistic/usage (one file per service), which the dashboard's Consumption tab READS
+# and aggregates. It unifies AI-token, compute and storage telemetry behind one surface.
+echo "[dashboard] declaring consumption metrics..."
+install -d -o holistic -g holistic -m 0755 /etc/holistic/usage.d
+install -d -o holistic -g holistic -m 0750 /var/lib/holistic/usage
+install -m 0644 "$HERE/usage/dashboard.json" /etc/holistic/usage.d/dashboard.json
+install -m 0644 "$HERE/usage/samba.json" /etc/holistic/usage.d/samba.json
+python3 "$HERE/lib/holistic-usage.py" validate /etc/holistic/usage.d
+
+# MCP standard (backend-only): services DECLARE the capabilities they expose over MCP in mcp.d
+# drop-ins (name + backing right + description). The central /api/mcp server serves the in-code
+# registry; these manifests are the auditable declaration of the surface, so the invariant "every
+# MCP capability is covered by the rights system" is checked at install time.
+echo "[dashboard] declaring MCP capabilities..."
+install -d -o holistic -g holistic -m 0755 /etc/holistic/mcp.d
+install -m 0644 "$HERE/mcp/samba.json" /etc/holistic/mcp.d/samba.json
+python3 "$HERE/lib/holistic-mcp.py" validate /etc/holistic/mcp.d
 
 echo "[dashboard] configuring Caddy..."
 install -d /etc/caddy
