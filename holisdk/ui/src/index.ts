@@ -139,8 +139,8 @@ export { TreeNav } from './treenav';
 export type { TreeNavProps, TreeNavNode, TreeNavPosition } from './treenav';
 
 // Files (cloud-style file manager)
-export { FileEntryIcon, FileThumb, Breadcrumb, UploadControl } from './files/parts';
-export type { BreadcrumbSegment, FileThumbSources } from './files/parts';
+export { FileEntryIcon, FileThumb, Breadcrumb, UploadControl, FileInput } from './files/parts';
+export type { BreadcrumbSegment, FileThumbSources, FileInputHandle } from './files/parts';
 export { FileBrowser } from './files/FileBrowser';
 export type { FileBrowserProps, FileActionId } from './files/FileBrowser';
 export { FileToolbar } from './files/FileToolbar';
