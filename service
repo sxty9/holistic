@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# service — the uniform Holistic service CLI (the shared form feature).
+#
+# Every deliverable Holistic service carries an executable `./service` at its repo root: it is the
+# ONE shape the delivery chain recognises a deliverable service by (devlab's deploy.Detect looks for
+# exactly this file, or a cmd/<id>d daemon). holistic — the central dashboard — is a real service and
+# so it carries one too. Because holistic is the landscape-ROOT service (it ships the whole-landscape
+# UI and orchestrates the others), its work is done by the existing `holistic` orchestrator; this
+# `service` CLI is the uniform façade over it, mapping the shared verbs to the orchestrator so holistic
+# is driven exactly like every other service:
+#
+#   ./service setup [target]        first-time system prep + install (delegates to `holistic setup`)
+#   ./service build                 build the deployable artifact (the dashboard SPA)
+#   ./service start|stop|restart [target]   lifecycle (delegates to `holistic start|stop|restart`)
+#   ./service status                install/running state (delegates to `holistic status`)
+#   ./service update                pull latest + re-run setup (delegates to `holistic update`)
+#
+# It is NOT a second orchestrator and holds no logic of its own — Keine Redundanz: it forwards to
+# `holistic`, the single source of truth for provisioning the landscape.
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ORCHESTRATOR="$REPO_ROOT/holistic"
+
+usage() {
+    cat <<'EOF'
+service — the uniform Holistic service CLI for the central dashboard (holistic)
+
+Usage:
+  ./service setup [target]              First-time system prep + install (target: default all)
+  ./service build                      Build the deployable artifact (the dashboard SPA)
+  ./service start|stop|restart [target]  Control the service
+  ./service status                     Show install/running state
+  ./service update                     Pull latest + re-run setup
+  ./service help                       Show this help
+
+holistic is the landscape-root service; every verb above is forwarded to the `holistic`
+orchestrator (the single source of truth). See ./holistic help for its full surface.
+EOF
+}
+
+# build — produce the dashboard's deployable artifact (the built SPA). The pnpm workspace root is the
+# repo root: it spans the project-neutral SDK (holisdk/*) and the app (frontend/app). Non-interactive
+# (CI=true) so it never blocks on a prompt, exactly as the install/build paths run it.
+cmd_build() {
+    command -v pnpm >/dev/null 2>&1 || { echo "[service] ERROR: pnpm is required to build the dashboard SPA" >&2; exit 1; }
+    ( cd "$REPO_ROOT" && export CI=true && pnpm install && pnpm --filter @holistic/app build )
+    echo "[service] build complete: frontend/app/dist"
+}
+
+verb="${1:-help}"; shift || true
+case "$verb" in
+    setup|start|stop|restart|status|update)
+        exec "$ORCHESTRATOR" "$verb" "$@"
+        ;;
+    build)
+        cmd_build "$@"
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        echo "[service] unknown command: $verb" >&2
+        usage >&2
+        exit 2
+        ;;
+esac

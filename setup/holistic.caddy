@@ -1,0 +1,12 @@
+# Routes the whole Holistic API (/api/*) to the dashboard backend.
+#
+# The dashboard is the landscape-ROOT service: its UI is the SPA served at the site root and
+# its backend answers the WHOLE /api/* prefix (not /api/services/<id>/* like a uniform service —
+# the dashboard calls /api/user, /api/instance, /api/services/<id>/… …). So its route is a naked
+# `handle /api/*` block, dropped into the shared route directory and imported INSIDE the host's
+# site block, exactly like devlab's own route. A more specific /api/services/<other>/* block from
+# another service still wins, so this catch-all coexists with them. This is the SAME layout the
+# self repo (devlab) uses — a named landscape-root exception, not a second route system.
+handle /api/* {
+	reverse_proxy 127.0.0.1:8770
+}

@@ -156,10 +156,28 @@ same id as the plugin and the permissions manifest); setting ids match
 `options[]` containing its default; `dangerous: true` makes the editor confirm before
 saving. Validate with `holistic config validate`.
 
+## Delivery
+
+holistic is a deliverable Holistic service like any other, and the deploy chain recognises it by the
+**same form feature every service carries**: an executable `./service` at the repo root (a uniform
+façade over the `holistic` orchestrator). Its first-time product — the systemd unit and the edge
+route — lives in [`setup/`](setup/) and travels with the delivery, so a host that has never run the
+dashboard gets it complete; `services/dashboard/install.sh` installs the unit from that same single
+source. `holistic-service.json` declares the coordinates the chain needs (the backend port and a
+health path) as named values, never a per-repo script.
+
+The dashboard is the landscape-**root** service — served at `/`, its backend answering the whole
+`/api/*`, running as the `holistic` account — so its unit is named `holistic-dashboard` (a unit named
+`holistic` would collide with the landscape identity), exactly as the self repo's unit is `devlabd`.
+See [`setup/README.md`](setup/README.md) for the naming and the layout rationale.
+
 ## Layout
 
 ```
-holistic                        CLI entry point
+service                         uniform service CLI — the deploy form feature (façade over ./holistic)
+holistic                        orchestrator CLI (system prep + all services)
+holistic-service.json           delivery declaration (port, health) — named values, no script
+setup/                          first-time delivery package — unit + edge route (travels to a bare host)
 services/manifest               install order
 services/<name>/install.sh      per-service setup
 services/<name>/ui/             optional dashboard UI (a @holisdk/ui plugin)

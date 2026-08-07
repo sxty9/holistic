@@ -78,7 +78,10 @@ python3 -m venv "$VENV"
 chown -R holistic:holistic "$APP"
 
 echo "[dashboard] configuring systemd..."
-install -m 0644 "$HERE/systemd/holistic-dashboard.service" /etc/systemd/system/holistic-dashboard.service
+# The unit is the SINGLE SOURCE in the top-level delivery package (<repo>/setup/) so the exact
+# bytes an operator's `holistic setup` installs are the bytes that TRAVEL to a bare host in the
+# delivery artifact (the deploy chain ships setup/ verbatim). No second copy of the unit exists.
+install -m 0644 "$REPO_ROOT/setup/holistic-dashboard.service" /etc/systemd/system/holistic-dashboard.service
 systemctl daemon-reload
 systemctl enable holistic-dashboard >/dev/null 2>&1 || true
 systemctl restart holistic-dashboard
