@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from ... import live_config
 from ...auth.deps import csrf_guard, current_user, require_permission
-from . import fsclient, paths
+from . import fsclient, ops, paths
 
 router = APIRouter(prefix="/api/services/samba", tags=["samba"])
 
@@ -82,21 +82,20 @@ def fs_roots(user: dict = Depends(require_view)):
 
 @router.get("/fs/list")
 def fs_list(path: str, user: dict = Depends(require_view)):
-    abspath = _abspath(user["username"], path)
-    base = paths.virtual_base(path)
     try:
-        data = fsclient.run_json(user["username"], "list", abspath)
+        return ops.list_directory(user["username"], path)
+    except paths.PathError:
+        raise HTTPException(400, "Invalid path")
     except fsclient.FsError as e:
         raise _fs_http(e)
-    entries = [_with_path(e, f"{base}/{e['name']}") for e in data.get("entries", [])]
-    return {"path": base, "entries": entries}
 
 
 @router.get("/fs/stat")
 def fs_stat(path: str, user: dict = Depends(require_view)):
-    abspath = _abspath(user["username"], path)
     try:
-        return _with_path(fsclient.run_json(user["username"], "stat", abspath), paths.virtual_base(path))
+        return ops.stat(user["username"], path)
+    except paths.PathError:
+        raise HTTPException(400, "Invalid path")
     except fsclient.FsError as e:
         raise _fs_http(e)
 
@@ -200,19 +199,15 @@ def fs_raw(path: str, request: Request, user: dict = Depends(require_view)):
 
 @router.get("/fs/text")
 def fs_text(path: str, user: dict = Depends(require_view)):
-    abspath = _abspath(user["username"], path)
-    max_text = live_config.max_text_bytes()  # centrally configurable, read live
     try:
-        meta = fsclient.run_json(user["username"], "stat", abspath)
-        if meta["kind"] != "file":
-            raise HTTPException(400, "Not a file")
-        if meta.get("viewer") not in ("text", "markdown"):
-            raise HTTPException(415, "Not a text file")
-        data = b"".join(fsclient.stream(user["username"], abspath, offset=0, length=max_text + 1))
+        content, truncated = ops.read_text(user["username"], path)
+    except paths.PathError:
+        raise HTTPException(400, "Invalid path")
+    except ops.NotViewableText as e:
+        raise HTTPException(415 if e.is_file else 400, str(e))
     except fsclient.FsError as e:
         raise _fs_http(e)
-    truncated = len(data) > max_text
-    return {"content": data[:max_text].decode("utf-8", "replace"), "truncated": truncated, "encoding": "utf-8"}
+    return {"content": content, "truncated": truncated, "encoding": "utf-8"}
 
 
 # --- mutations (CSRF-guarded) ------------------------------------------

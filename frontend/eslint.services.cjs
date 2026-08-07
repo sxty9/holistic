@@ -13,18 +13,18 @@ module.exports = {
         // Raw HTML host elements (<div>, <span>, …) are forbidden — forces SDK layout primitives.
         selector: 'JSXOpeningElement[name.name=/^[a-z]/]',
         message:
-          'Service UIs may not render raw HTML elements. Compose @holistic/ui components only (Stack, Box, Text, …).',
+          'Service UIs may not render raw HTML elements. Compose @holisdk/ui components only (Stack, Box, Text, …).',
       },
       {
         selector: 'JSXAttribute[name.name="dangerouslySetInnerHTML"]',
         message: 'Raw HTML injection is forbidden in service UIs.',
       },
       {
-        // Any bare (non-relative) import that is not react / react-dom / @holistic/ui.
+        // Any bare (non-relative) import that is not react / react-dom / @holisdk/ui.
         selector:
-          'ImportDeclaration[source.value=/^[^.]/]:not([source.value=/^(react($|[-/])|@holistic\\/ui($|\\/))/])',
+          'ImportDeclaration[source.value=/^[^.]/]:not([source.value=/^(react($|[-/])|@holisdk\\/ui($|\\/))/])',
         message:
-          'Service UIs may import only "@holistic/ui", "react", "react-dom", or local relative files.',
+          'Service UIs may import only "@holisdk/ui", "react", "react-dom", or local relative files.',
       },
     ],
     'no-restricted-globals': [

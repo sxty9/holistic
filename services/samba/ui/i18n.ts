@@ -1,5 +1,5 @@
 // Messages for the Files (samba) service. Registered on import (see index.tsx).
-import { registerMessages, type MessageVars } from '@holistic/ui';
+import { registerMessages, type MessageVars } from '@holisdk/ui';
 
 const count = (v: MessageVars) => Number(v.count ?? 0);
 

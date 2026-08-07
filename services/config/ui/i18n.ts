@@ -5,7 +5,7 @@
 // declaring service's manifest; a service may localize its own labels by registering
 // `config.cat.<service>.<category>` / `config.set.<service>.<id>` in its bundle — otherwise the
 // manifest text is shown verbatim (same fallback rule as the rights catalog).
-import { registerMessages } from '@holistic/ui';
+import { registerMessages } from '@holisdk/ui';
 
 registerMessages({
   'en-US': {

@@ -18,8 +18,6 @@ the services, over a purely passive pool.
 """
 from __future__ import annotations
 
-import json
-import os
 import re
 from typing import Any
 
@@ -27,13 +25,13 @@ from fastapi import APIRouter, Depends
 
 from ...auth.deps import require_admin
 from ...config import settings
+from ..dropins import SERVICE_RE, read_manifest_dir
 from . import reporters
 
 router = APIRouter(prefix="/api/services/usage", tags=["usage"], dependencies=[Depends(require_admin)])
 
-# Same id grammar as the config/rights standards — a service id is the join key of the whole
-# landscape (plugin id == directory == manifest stem == pool-file stem).
-SERVICE_RE = re.compile(r"^[a-z][a-z0-9]{2,19}$")
+# SERVICE_RE is the shared id grammar (dropins) — the join key of the whole landscape (plugin id
+# == directory == manifest stem == pool-file stem); metrics use their own id grammar below.
 METRIC_RE = re.compile(r"^[a-z][a-zA-Z0-9_]*$")
 
 # The four consumption kinds and their canonical unit. Every declared metric names one kind, so a
@@ -77,22 +75,7 @@ def _norm(manifest: Any, stem: str) -> dict | None:
 
 
 def _manifests() -> list[dict]:
-    d = settings.usage_manifests_dir
-    try:
-        names = sorted(n for n in os.listdir(d) if n.endswith(".json"))
-    except OSError:
-        return []  # no drop-in dir yet → no service declares consumption
-    out = []
-    for name in names:
-        try:
-            with open(os.path.join(d, name)) as fh:
-                data = json.load(fh)
-        except (OSError, json.JSONDecodeError):
-            continue
-        m = _norm(data, name[:-5])
-        if m:
-            out.append(m)
-    return sorted(out, key=lambda m: m["service"])
+    return read_manifest_dir(settings.usage_manifests_dir, _norm)
 
 
 def _number(value: Any) -> float | int:

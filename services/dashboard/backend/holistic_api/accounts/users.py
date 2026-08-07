@@ -86,3 +86,29 @@ def get_user_info(username: str) -> dict:
         "isAdmin": settings.admin_group in groups,
         "shellEnabled": _shell_enabled(pw.pw_shell),
     })
+
+
+# Every provisioned holistic user joins this group, so its membership IS the user roster (the same
+# group the dev branch of get_user_info seeds). Kept next to the single per-user accessor so "who
+# the users are" has exactly one home.
+_ROSTER_GROUP = "smbusers"
+
+
+def list_users() -> list[dict]:
+    """Every holistic user, each resolved through get_user_info — the single accessor for the user
+    roster, so callers (e.g. the admin API) build on this instead of scanning passwd/groups on
+    their own. In dev (fake provisioning) the roster is the in-memory registry."""
+    if settings.dev_fake_provision:
+        names = sorted(_DEV_USERS)
+    else:
+        try:
+            names = sorted(set(grp.getgrnam(_ROSTER_GROUP).gr_mem))
+        except KeyError:
+            names = []
+    out = []
+    for name in names:
+        try:
+            out.append(get_user_info(name))
+        except KeyError:
+            continue
+    return out

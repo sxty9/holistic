@@ -1,9 +1,11 @@
 """Samba's capabilities, exposed as MCP tools.
 
-These reuse the very same path-confinement (paths.resolve_virtual) and broker client (fsclient) as
-the HTTP file endpoints — no second implementation of the capability (Reuse-before-Build) — and are
-gated by the same read right, hp_samba_view. So an agent reaches exactly what the user could reach
-in the Files tab, no more: every tool is covered by the rights system (MCP axiom).
+Each tool is a thin adapter over the shared Samba capability layer (services.samba.ops) — the very
+same functions the HTTP file endpoints call, so there is no second implementation of the capability
+(Reuse-before-Build). A tool only maps ops' domain errors onto MCP errors and wraps the result in an
+MCP text block. Every tool is gated by the same read right, hp_samba_view, so an agent reaches
+exactly what the user could reach in the Files tab, no more: every tool is covered by the rights
+system (MCP axiom).
 
 Read-only for now; write tools would register against hp_samba_edit / hp_samba_family_write the
 same way, so the rights coverage stays symmetric with the HTTP surface.
@@ -12,8 +14,7 @@ from __future__ import annotations
 
 import json
 
-from .. import live_config
-from ..services.samba import fsclient, paths
+from ..services.samba import fsclient, ops, paths
 from . import McpError, McpTool, register, text
 
 SAMBA_VIEW = "hp_samba_view"
@@ -38,51 +39,39 @@ def _req_path(args: dict) -> str:
     return p
 
 
-def _resolve(username: str, vpath: str) -> str:
-    try:
-        return paths.resolve_virtual(username, vpath)
-    except paths.PathError:
-        raise McpError("Invalid path")
-
-
 def _list_directory(args: dict, user: dict) -> list[dict]:
     vpath = _req_path(args)
-    abspath = _resolve(user["username"], vpath)
-    base = paths.virtual_base(vpath)
     try:
-        data = fsclient.run_json(user["username"], "list", abspath)
+        result = ops.list_directory(user["username"], vpath)
+    except paths.PathError:
+        raise McpError("Invalid path")
     except fsclient.FsError as e:
         raise McpError(str(e) or "Could not list the directory")
-    entries = [{**e, "path": f"{base}/{e['name']}"} for e in data.get("entries", [])]
-    return [text(json.dumps({"path": base, "entries": entries}, indent=2))]
+    return [text(json.dumps(result, indent=2))]
 
 
 def _stat(args: dict, user: dict) -> list[dict]:
     vpath = _req_path(args)
-    abspath = _resolve(user["username"], vpath)
     try:
-        meta = fsclient.run_json(user["username"], "stat", abspath)
+        meta = ops.stat(user["username"], vpath)
+    except paths.PathError:
+        raise McpError("Invalid path")
     except fsclient.FsError as e:
         raise McpError(str(e) or "Could not stat the path")
-    meta["path"] = paths.virtual_base(vpath)
     return [text(json.dumps(meta, indent=2))]
 
 
 def _read_text_file(args: dict, user: dict) -> list[dict]:
     vpath = _req_path(args)
-    abspath = _resolve(user["username"], vpath)
-    max_text = live_config.max_text_bytes()
     try:
-        meta = fsclient.run_json(user["username"], "stat", abspath)
-        if meta["kind"] != "file":
-            raise McpError("Not a file")
-        if meta.get("viewer") not in ("text", "markdown"):
-            raise McpError("Not a text file")
-        data = b"".join(fsclient.stream(user["username"], abspath, offset=0, length=max_text + 1))
+        body, truncated = ops.read_text(user["username"], vpath)
+    except paths.PathError:
+        raise McpError("Invalid path")
+    except ops.NotViewableText as e:
+        raise McpError(str(e))
     except fsclient.FsError as e:
         raise McpError(str(e) or "Could not read the file")
-    body = data[:max_text].decode("utf-8", "replace")
-    if len(data) > max_text:
+    if truncated:
         body += "\n\n[truncated]"
     return [text(body)]
 
