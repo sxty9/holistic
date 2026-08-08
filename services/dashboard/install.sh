@@ -74,11 +74,15 @@ cp -r "$REPO_ROOT/frontend/app/dist/." "$WWW/"
 echo "[dashboard] installing backend (venv)..."
 python3 -m venv "$VENV"
 "$VENV/bin/pip" install -q --upgrade pip
-"$VENV/bin/pip" install -q "$HERE"
+# The ONE installable package definition lives at the repo root (see /pyproject.toml): the
+# delivery chain builds the artifact from there, so this hand install uses the same source.
+"$VENV/bin/pip" install -q "$REPO_ROOT"
 chown -R holistic:holistic "$APP"
 
 echo "[dashboard] configuring systemd..."
-install -m 0644 "$HERE/systemd/holistic-dashboard.service" /etc/systemd/system/holistic-dashboard.service
+# The unit is the delivery package's source of truth (setup/<unit>.service — the same file the
+# chain installs on a fresh host), so this hand install installs that very file.
+install -m 0644 "$REPO_ROOT/setup/holistic-dashboard.service" /etc/systemd/system/holistic-dashboard.service
 systemctl daemon-reload
 systemctl enable holistic-dashboard >/dev/null 2>&1 || true
 systemctl restart holistic-dashboard

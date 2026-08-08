@@ -9,6 +9,9 @@ secrets.tdb
 node_modules/
 dist/
 *.local
+# The delivery builder runs `npm install` (falling back from `npm ci`), which drops an npm
+# lockfile into this pnpm workspace — a build byproduct, never committed.
+package-lock.json
 
 # External service-UI plugins linked in at install time (e.g. hostek)
 frontend/external/
@@ -26,6 +29,10 @@ venv/
 # Packaging / build artifacts (regenerable)
 *.egg-info/
 services/dashboard/build/
+# Root in-tree build dir from `pip install .` (build.kind=python-app)
+/build/
+# The delivery chain's staged artifact
+.mercury-artifact/
 
 # OS / editor junk
 .DS_Store
