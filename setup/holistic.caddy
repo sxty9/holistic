@@ -1,0 +1,20 @@
+# holistic — the delivery package's edge route (ships beside setup/holistic-dashboard.service).
+#
+# WHY this file exists: the delivery chain copies the whole setup/ directory into the artifact,
+# and when a service ships its OWN systemd unit (holistic-dashboard.service), emit-setup leaves
+# that unit in place and generates NOTHING over it — including no route. So the edge route must
+# travel in the package too, or a host on which holistic has never stood receives the unit but
+# no way to reach it.
+#
+# WHAT it is: a naked `handle` block (a Caddy directive with no surrounding site block). The host
+# edge shell imports this directory INSIDE its one site block, and a naked directive is valid only
+# there — the same contract every delivered *.caddy shares. The static SPA fallback (root/file_server)
+# belongs to that edge shell, so it is deliberately NOT repeated here.
+#
+# holistic is the landscape's own dashboard — the root app of a holistic instance. Its backend
+# answers the WHOLE /api/* prefix (not the per-service /api/services/<id>/* a uniform service takes),
+# so its route is a catch-all /api/* block, on the loopback port its unit declares (8770). A more
+# specific /api/services/<other>/* block from another service still wins, so this coexists with them.
+handle /api/* {
+	reverse_proxy 127.0.0.1:8770
+}

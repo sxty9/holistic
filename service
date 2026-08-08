@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# service — holistic's uniform holistic-service CLI (template convention; verbs + exit codes match
+# the holistic-service-template `service` exactly).
+#
+# holistic is the landscape's OWN dashboard — the root app of a holistic instance — and its full
+# orchestration already lives in the checked-in `./holistic` script (system prep, service install,
+# users, invites, the four manifest standards, systemd lifecycle). This file adds NO second
+# implementation of any of that. It is the uniform `./service` facade the delivery chain's
+# deploy.Detect recognizes as "a deliverable service" and that every service CLI shares, and it maps
+# the shared verbs onto what `./holistic` already does, so holistic is driven like any other service.
+#
+# The unattended delivery chain never runs this: it builds the python-app artifact via devlab-exec
+# artifact-build and installs it root-side. This CLI is the INTERACTIVE human path and the conformity
+# marker — it must exist, be executable, and run without arguments without crashing.
+#
+# Exit codes: 0 ok · 1 generic · 2 usage · 4 external · 5 config-state · 10 declined
+
+set -euo pipefail
+
+SERVICE_ID="holistic"
+SERVICE_VERSION="0.1.0"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ORCH="$REPO_ROOT/holistic"                 # the existing orchestrator — the single source of truth
+ORIG_ARGS=("$@")
+
+log()  { printf '[%s] %s\n' "$SERVICE_ID" "$*"; }
+die()  { printf '[%s] error: %s\n' "$SERVICE_ID" "$*" >&2; exit "${2:-1}"; }
+
+# The privileged verbs run system changes as root. Re-exec under sudo — preserving env and the
+# original argv — so a human never has to type it (the template convention). The read-only verbs
+# (status, list, help, version) never elevate.
+needs_root() {
+  [ "$(id -u)" -eq 0 ] && return 0
+  command -v sudo >/dev/null || die "must run as root (sudo not found)" 4
+  exec sudo -E "$0" "${ORIG_ARGS[@]}"
+}
+
+require_orch() {
+  [ -x "$ORCH" ] || die "the holistic orchestrator is missing at $ORCH — run from the repo root" 5
+}
+
+cmd_help() {
+  cat <<EOF
+service — uniform CLI for the holistic dashboard (holistic-service $SERVICE_VERSION).
+
+This is the shared \`./service\` facade over the existing \`./holistic\` orchestrator; it adds no
+second implementation. Every verb maps onto what \`./holistic\` already does.
+
+Usage:
+  sudo ./service setup [<svc>]        Install/repair the landscape (or one service) → holistic setup
+  sudo ./service build                Rebuild + reinstall the dashboard (SPA + backend venv), restart
+                                      → holistic setup dashboard
+  sudo ./service start|stop|restart [target]   Control services → holistic start|stop|restart
+                                      (target: dashboard|caddy|samba|all; default all)
+  ./service status                    Show whether each service is running → holistic status
+  ./service list                      List services in install order → holistic list
+  sudo ./service update               git pull --ff-only + re-run setup → holistic update
+  ./service help | version
+
+For the full orchestrator surface (user, invite, perms, config, usage, mcp), use ./holistic directly.
+EOF
+}
+
+main() {
+  local cmd="${1:-help}"; shift || true
+  case "$cmd" in
+    setup)                require_orch; needs_root; exec "$ORCH" setup "$@" ;;
+    build)                require_orch; needs_root; log "rebuilding dashboard (SPA + backend venv)…"; exec "$ORCH" setup dashboard ;;
+    start|stop|restart)   require_orch; needs_root; exec "$ORCH" "$cmd" "$@" ;;
+    status)               require_orch; exec "$ORCH" status ;;
+    list)                 require_orch; exec "$ORCH" list ;;
+    update)               require_orch; needs_root; exec "$ORCH" update ;;
+    version|-v|--version) echo "holistic-service $SERVICE_VERSION" ;;
+    help|-h|--help)       cmd_help ;;
+    *) die "unknown command: $cmd (run './service help')" 2 ;;
+  esac
+}
+
+main "$@"
